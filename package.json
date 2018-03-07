@@ -13,6 +13,7 @@
   "build": {
     "type": "plugin",
     "pluggable": false,
+    "index": "index.js",
     "config": [
       "config/settings.json"
     ],
@@ -53,7 +54,10 @@
     "geopackage",
     "geospatial"
   ],
-  "author": "Brad Hards <bradh@frogmouth.net>",
+  "authors": [
+    "Brad Hards <bradh@frogmouth.net>",
+    "William Wall <wwall@caci.com>"
+  ],
   "license": "Apache-2.0",
   "config": {
     "commitizen": {
