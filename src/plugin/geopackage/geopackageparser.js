@@ -17,23 +17,7 @@ goog.require('os.parse.IParser');
  * @constructor
  */
 plugin.geopackage.GeoPackageParser = function() {
-  /**
-   * @type {?Document}
-   * @protected
-   */
-  this.document = null;
-
-  /**
-   * @type {?NodeList}
-   * @protected
-   */
-  this.entries = null;
-
-  /**
-   * @type {number}
-   * @protected
-   */
-  this.nextIndex = 0;
+  this.geopackage = null;
 };
 
 
@@ -41,25 +25,21 @@ plugin.geopackage.GeoPackageParser = function() {
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageParser.prototype.setSource = function(source) {
-  if (ol.xml.isDocument(source)) {
-    this.document = /** @type {Document} */ (source);
-  } else if (goog.isString(source)) {
-    this.document = ol.xml.parse(source);
-  }
-
-  if (this.document) {
-    this.entries = this.document.querySelectorAll('entry');
-  }
+  var buffer = new Uint8Array(/** @type {ArrayBuffer} */ (source));
+  geopackage.openGeoPackageByteArray(buffer, this.loaded);
 };
 
+
+plugin.geopackage.GeoPackageParser.prototype.loaded = function(err, geopackage) {
+  if (!err) {
+    this.geopackage = geopackage;
+  }
+};
 
 /**
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageParser.prototype.cleanup = function() {
-  this.document = null;
-  this.entries = null;
-  this.nextIndex = 0;
 };
 
 
@@ -67,7 +47,7 @@ plugin.geopackage.GeoPackageParser.prototype.cleanup = function() {
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageParser.prototype.hasNext = function() {
-  return this.entries != null && this.entries.length > this.nextIndex;
+  return false;
 };
 
 
@@ -75,26 +55,7 @@ plugin.geopackage.GeoPackageParser.prototype.hasNext = function() {
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageParser.prototype.parseNext = function() {
-  var nextEntry = this.entries[this.nextIndex++];
-  var children = nextEntry.childNodes;
-  var properties = {};
-
-  for (var i = 0, n = children.length; i < n; i++) {
-    var el = /** @type {Element} */ (children[i]);
-
-    if (el.localName === 'link') {
-      properties[el.localName] = el.getAttribute('href');
-    } else if (el.namespaceURI === 'http://www.georss.org/georss') {
-      var geom = plugin.geopackage.GeoPackageParser.parseGeometry(el);
-      if (geom) {
-        properties['geometry'] = geom;
-      }
-    } else {
-      properties[el.localName] = el.textContent;
-    }
-  }
-
-  return new ol.Feature(properties);
+  return null;
 };
 
 
