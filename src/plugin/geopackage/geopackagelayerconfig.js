@@ -21,7 +21,7 @@ goog.inherits(plugin.geopackage.GeoPackageLayerConfig, os.layer.config.AbstractD
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageLayerConfig.prototype.getParser = function(options) {
-  return new plugin.geopackage.GeoPackageParser();
+  return new plugin.geopackage.GeoPackageParser(null);
 };
 
 
