@@ -25,6 +25,12 @@ plugin.geopackage.GeoPackageParser = function(config) {
    * @private
    */
   this.initialised_ = false;
+  
+  /**
+   * @type {number}
+   * @private
+   */
+  this.count = 0;
 
 };
 goog.inherits(plugin.geopackage.GeoPackageParser, os.parse.AsyncParser);
@@ -35,19 +41,18 @@ goog.inherits(plugin.geopackage.GeoPackageParser, os.parse.AsyncParser);
  */
 plugin.geopackage.GeoPackageParser.prototype.setSource = function(source) {
   var buffer = new Uint8Array(/** @type {ArrayBuffer} */ (source));
-  geopackage.openGeoPackageByteArray(buffer, this.loaded_);
+  geopackage.openGeoPackageByteArray(buffer, this.loaded_.bind(this));
 };
 
 /**
  * @private
+ * @this plugin.geopackage.GeoPackageParser
  */
 plugin.geopackage.GeoPackageParser.prototype.loaded_ = function(err, gpkg) {
   if (err) {
     this.onError();
   } else {
     this.geopkg = gpkg;
-    // TODO: why is onReady not a function?
-    // Debugger says "this" is a Window object.
     this.onReady();
   }
 };
@@ -88,7 +93,8 @@ plugin.geopackage.GeoPackageParser.prototype.disposeInternal = function() {
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageParser.prototype.hasNext = function() {
-  return false;
+  this.count++;
+  return (this.count < 2);
 };
 
 
@@ -97,7 +103,7 @@ plugin.geopackage.GeoPackageParser.prototype.hasNext = function() {
  */
 plugin.geopackage.GeoPackageParser.prototype.parseNext = function() {
   var properties = {};
-  var geom = new ol.geom.Point([135.2, -34.2]);
+  var geom = new ol.geom.Point([135.2, -34.2]).osTransform();
   properties['geometry'] = geom;
   return new ol.Feature(properties);
 };

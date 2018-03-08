@@ -56,7 +56,7 @@ plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
       title  // the description
       ));
   
-  // register the geojson descriptor type
+  // register the geopackage descriptor type
   dm.registerDescriptorType(plugin.geopackage.ID, plugin.geopackage.GeoPackageDescriptor)
 };
 
