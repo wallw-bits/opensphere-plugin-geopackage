@@ -8,8 +8,9 @@ goog.require('os.ui.ControlType');
 goog.require('plugin.geopackage.GeoPackageProvider');
 
 
+
 /**
- * GeoPackage file descriptor.
+ * GeoPackage descriptor.
  * @extends {os.data.FileDescriptor}
  * @constructor
  */

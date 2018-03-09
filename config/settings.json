@@ -1,4 +1,10 @@
 {
-  "admin": {
-  }
+ "admin": {
+   "providers": {
+     "gpkg-test1": {
+       "type": "geopackage",
+       "url": "http://192.168.40.118/~bradh/workspace/opensphere/cats.gpkg"
+     }
+   }
+ }
 }

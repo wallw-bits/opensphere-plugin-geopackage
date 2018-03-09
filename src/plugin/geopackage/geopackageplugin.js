@@ -5,10 +5,7 @@ goog.require('os.data.ProviderEntry');
 goog.require('os.plugin.AbstractPlugin');
 goog.require('os.plugin.PluginManager');
 goog.require('plugin.geopackage.GeoPackageDescriptor');
-goog.require('plugin.geopackage.GeoPackageImportUI');
-goog.require('plugin.geopackage.GeoPackageLayerConfig');
 goog.require('plugin.geopackage.GeoPackageProvider');
-goog.require('plugin.geopackage.GeoPackageTypeMethod');
 
 
 /**
@@ -35,16 +32,7 @@ plugin.geopackage.ID = 'geopackage';
  * @inheritDoc
  */
 plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
-  var lcm = os.layer.config.LayerConfigManager.getInstance();
-  lcm.registerLayerConfig(plugin.geopackage.ID, plugin.geopackage.GeoPackageLayerConfig);
-  
-  // register the geopackage file type method
-  var fm = os.file.FileManager.getInstance();
-  fm.registerContentTypeMethod(new plugin.geopackage.GeoPackageTypeMethod());
-  
-  var im = os.ui.im.ImportManager.getInstance();
-  im.registerImportDetails('GeoPackage', true);
-  im.registerImportUI(plugin.geopackage.ID, new plugin.geopackage.GeoPackageImportUI());
+
   
   // register geopackage provider type
   var dm = os.data.DataManager.getInstance();
