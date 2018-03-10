@@ -4,7 +4,6 @@ goog.require('os.data.DataManager');
 goog.require('os.data.ProviderEntry');
 goog.require('os.plugin.AbstractPlugin');
 goog.require('os.plugin.PluginManager');
-goog.require('plugin.geopackage.GeoPackageDescriptor');
 goog.require('plugin.geopackage.GeoPackageProvider');
 
 
@@ -32,20 +31,14 @@ plugin.geopackage.ID = 'geopackage';
  * @inheritDoc
  */
 plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
-
-  
   // register geopackage provider type
   var dm = os.data.DataManager.getInstance();
-  var title = 'GeoPackage Layers';
   dm.registerProviderType(new os.data.ProviderEntry(
       plugin.geopackage.ID,               // the type
       plugin.geopackage.GeoPackageProvider,   // the class
-      title, // the title
-      title  // the description
+      'GeoPackage File', // the title
+      'Provides offline raster and vector data'  // the description
       ));
-  
-  // register the geopackage descriptor type
-  dm.registerDescriptorType(plugin.geopackage.ID, plugin.geopackage.GeoPackageDescriptor)
 };
 
 

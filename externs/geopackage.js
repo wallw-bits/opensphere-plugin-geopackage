@@ -11,41 +11,80 @@
 var geopackage = {};
 
 /**
- * Open a GeoPackage at the path specified
- * @param  {string}   gppath   path where the GeoPackage exists
- * @param  {Function} callback called with an error and the GeoPackage object if opened
+ * @param {string} path Path where geopackage exists
+ * @param {function(*, GeoPackage):*} callback Called with `err, geopackage`
  */
-geopackage.openGeoPackage = function(gppath, callback) {};
+geopackage.openGeoPackage = function(path, callback) {};
 
 /**
- * Open a GeoPackage from the byte array
- * @param  {Uint8Array}   array    Array of GeoPackage bytes
- * @param  {Function} callback called with an error if it occurred and the open GeoPackage object
+ * @param {Uint8Array} array Array of GeoPackage bytes
+ * @param {function(*, GeoPackage):*} callback Called with `err, geopackage`
  */
 geopackage.openGeoPackageByteArray = function(array, callback) {};
 
+/**
+ * @constructor
+ */
+var GeoPackage;
 
 /**
- * Gets the feature tables from the GeoPackage
- * @param  {Object}   geopackage open GeoPackage object
- * @param  {Function} callback   called with an error if one occurred and the array of feature table names
+ * Close the database connection
  */
-geopackage.getFeatureTables = function(geopackage, callback) {};
+GeoPackage.prototype.close = function() {};
 
 /**
- * Get a Feature DAO from Contents
- * @param  {string}   tableName table name
- * @param  {Function} callback callback called with an error if one occurred and the {FeatureDao}
+ * @return {string} The name
  */
-geopackage.getFeatureDaoWithTableName = function (tableName, callback) {};
+GeoPackage.prototype.getName = function() {};
+
+/**
+ * @return {string} The path
+ */
+GeoPackage.prototype.getPath = function() {};
+
+/**
+ * @param {function(*, Array<!string>):*} callback Called with `err, tableNames`
+ */
+GeoPackage.prototype.getFeatureTables = function(callback) {};
+
+/**
+ * @param {!string} table The table name
+ * @param {function(*, GeoPackage.FeatureDao):*} callback Called with `err, featureDao`
+ */
+GeoPackage.prototype.getFeatureDaoWithTableName = function(table, callback) {};
+
+/**
+ * @param {!string} tableName The name of the tile table to find
+ * @param {function(*, GeoPackage.TileDao):*} callback Called with `err, TileDao`
+ */
+GeoPackage.prototype.getTileDaoWithTableName = function(tableName, callback) {};
+
+/**
+ * @param {function(*, Array<!string>):*} callback Called with `err, tableNames`
+ */
+GeoPackage.prototype.getTileTables = function(callback) {};
+
+/**
+ * @param {GeoPackage.TileDao|GeoPackage.FeatureDao} tableDao The table data access object
+ * @param {function(*, Object<string, *>):*} callback Called with `err, info`
+ */
+GeoPackage.prototype.getInfoForTable = function(tableDao, callback) {};
+
+
+// We aren't using properties off of these yet, but this allows us to still properly type
+// items without resorting to {Object}.
+
+/**
+ * @typedef {{
+ *  table_name: string
+ * }}
+ */
+GeoPackage.TileDao;
 
 
 /**
- * Iterate GeoJSON features from table
- * @param  {Object} geopackage      open GeoPackage object
- * @param  {String} table           Table name to Iterate
- * @param  {Function} featureCallback called with an error if one occurred and the next GeoJSON feature in the table
- * @param  {Function} doneCallback    called when all rows are complete
+ * @typedef {{
+ *  table_name: string
+ * }}
  */
-geopackage.iterateGeoJSONFeaturesFromTable = function(geopackage, table, featureCallback, doneCallback) {};
-
+GeoPackage.FeatureDao;

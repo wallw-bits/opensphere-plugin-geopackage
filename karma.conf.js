@@ -33,7 +33,8 @@ module.exports = function(config) {
       {pattern: resolver.resolveModulePath('d3/d3.min.js', __dirname), watched: false, included: true, served: true},
       {pattern: resolver.resolveModulePath('jsts/dist/jsts.min.js', __dirname), watched: false, included: true, served: true},
       {pattern: resolver.resolveModulePath('moment/min/moment.min.js', __dirname), watched: false, included: true, served: true},
-      {pattern: resolver.resolveModulePath('cesium/Build/Cesium/Cesium.js', __dirname), watched: false, included: true, served: true}
+      {pattern: resolver.resolveModulePath('cesium/Build/Cesium/Cesium.js', __dirname), watched: false, included: true, served: true},
+      {pattern: resolver.resolveModulePath('@ngageoint/geopackage/dist/geopackage.min.js', __dirname), watched: false, included: true, served: true},
     ].concat(closureFiles).concat([
       // {pattern: resolver.resolveModulePath('opensphere/test/init.js', __dirname), watched: false, included: true, served: true},
 
