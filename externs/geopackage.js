@@ -71,15 +71,39 @@ GeoPackage.prototype.getTileTables = function(callback) {};
 GeoPackage.prototype.getInfoForTable = function(tableDao, callback) {};
 
 
-// We aren't using properties off of these yet, but this allows us to still properly type
-// items without resorting to {Object}.
-
 /**
- * @typedef {{
- *  table_name: string
- * }}
+ * @constructor
  */
 GeoPackage.TileDao;
+
+/**
+ * @type {string}
+ */
+GeoPackage.TileDao.prototype.table_name;
+
+/**
+ * @type {Array<?GeoPackage.TileMatrix>}
+ */
+GeoPackage.TileDao.prototype.zoomLevelToTileMatrix;
+
+/**
+ * @param {number} x The tile column
+ * @param {number} y The tile row
+ * @param {number} z The zoom level
+ * @param {function(*, GeoPackage.Tile):*} callback Called with `err, tile`
+ */
+GeoPackage.TileDao.prototype.queryForTile = function(x, y, z, callback) {};
+
+
+/**
+ * @constructor
+ */
+GeoPackage.Tile;
+
+/**
+ * @return {Uint8Array} The byte data for the tile
+ */
+GeoPackage.Tile.prototype.getTileData = function() {};
 
 
 /**
@@ -88,3 +112,18 @@ GeoPackage.TileDao;
  * }}
  */
 GeoPackage.FeatureDao;
+
+
+/**
+ * @typedef {{
+ *   table_name: string,
+ *   zoom_level: number,
+ *   matrix_height: number,
+ *   matrix_width: number,
+ *   tile_height: number,
+ *   tile_width: number,
+ *   pixel_x_size: number,
+ *   pixel_y_size: number
+ * }}
+ */
+GeoPackage.TileMatrix;

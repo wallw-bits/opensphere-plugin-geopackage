@@ -5,6 +5,7 @@ goog.require('os.data.ProviderEntry');
 goog.require('os.plugin.AbstractPlugin');
 goog.require('os.plugin.PluginManager');
 goog.require('plugin.geopackage.GeoPackageProvider');
+goog.require('plugin.geopackage.TileLayerConfig');
 
 
 /**
@@ -39,6 +40,9 @@ plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
       'GeoPackage File', // the title
       'Provides offline raster and vector data'  // the description
       ));
+
+  var lcm = os.layer.config.LayerConfigManager.getInstance();
+  lcm.registerLayerConfig(plugin.geopackage.ID + '-tile', plugin.geopackage.TileLayerConfig);
 };
 
 

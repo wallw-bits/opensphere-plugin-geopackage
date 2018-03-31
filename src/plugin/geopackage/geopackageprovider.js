@@ -45,6 +45,14 @@ plugin.geopackage.GeoPackageProvider.LOGGER_ = goog.log.getLogger('plugin.geopac
 
 
 /**
+ * @return {GeoPackage}
+ */
+plugin.geopackage.GeoPackageProvider.prototype.getGeoPackage = function() {
+  return this.geopkg_;
+};
+
+
+/**
  * @inheritDoc
  */
 plugin.geopackage.GeoPackageProvider.prototype.configure = function(config) {
@@ -100,7 +108,7 @@ plugin.geopackage.GeoPackageProvider.prototype.finish = function() {
  * @return {number} per typical compare functions
  */
 plugin.geopackage.GeoPackageProvider.sort_ = function(a, b) {
-  return goog.string.numerateCompare(a.getLabel(), b.getLabel());
+  return goog.string.intAwareCompare(a.getLabel() || '', b.getLabel() || '');
 };
 
 
@@ -217,17 +225,18 @@ plugin.geopackage.GeoPackageProvider.prototype.onTileDao_ = function(err, tileDa
   }
 
   if (tileDao) {
-    this.geopkg_.getInfoForTable(tileDao, this.onTileInfo_.bind(this));
+    this.geopkg_.getInfoForTable(tileDao, this.onTileInfo_.bind(this, tileDao));
   }
 };
 
 
 /**
+ * @param {GeoPackage.TileDao} tileDao The tile data access object
  * @param {*} err Error message, if any
  * @param {Object<string, *>} info
  * @private
  */
-plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(err, info) {
+plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(tileDao, err, info) {
   if (err) {
     this.logError(err);
     return;
@@ -235,6 +244,8 @@ plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(err, info)
 
   if (info) {
     var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + info['tableName'];
+
+    var tileMatrices = tileDao.zoomLevelToTileMatrix;
 
     var config = {
       'id': id,
@@ -244,13 +255,17 @@ plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(err, info)
       'icons': os.ui.Icons.TILES,
       'delayUpdateActive': true,
       'title': info['tableName'],
-      'minZoom': info['minZoom'],
-      'maxZoom': info['maxZoom']
+      'minZoom': Math.round(info['minZoom']),
+      'maxZoom': Math.round(info['maxZoom']),
+      'resolutions': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToResolution),
+      'matrixIds': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToId),
+      'tileSizes': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToTileSize),
+      'widths': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToWidth)
     };
 
     if (info['contents']) {
       config['title'] = info['contents']['identifier'] || config['title'];
-      config['description'] =  info['contents']['description'] || config['description'];
+      config['description'] = info['contents']['description'] || config['description'];
     }
 
     if (info['srs']) {
@@ -275,6 +290,48 @@ plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(err, info)
   if (this.itemsRemaining_ === 0) {
     this.finish();
   }
+};
+
+
+/**
+ * @param {?GeoPackage.TileMatrix} tileMatrix
+ * @return {?number} resolution
+ */
+plugin.geopackage.GeoPackageProvider.tileMatrixToResolution = function(tileMatrix) {
+  return tileMatrix ? tileMatrix.pixel_x_size : null;
+};
+
+
+/**
+ * @param {?GeoPackage.TileMatrix} tileMatrix
+ * @return {?(number|ol.Size)} The tile size
+ */
+plugin.geopackage.GeoPackageProvider.tileMatrixToTileSize = function(tileMatrix) {
+  if (!tileMatrix) {
+    return null;
+  }
+
+  var h = tileMatrix.tile_height;
+  var w = tileMatrix.tile_width;
+  return w === h ? w : [w, h];
+};
+
+
+/**
+ * @param {?GeoPackage.TileMatrix} tileMatrix
+ * @return {?number} The matrix width
+ */
+plugin.geopackage.GeoPackageProvider.tileMatrixToWidth = function(tileMatrix) {
+  return tileMatrix ? tileMatrix.matrix_width : null;
+};
+
+
+/**
+ * @param {?GeoPackage.TileMatrix} tileMatrix
+ * @return {?number}
+ */
+plugin.geopackage.GeoPackageProvider.tileMatrixToId = function(tileMatrix) {
+  return tileMatrix ? tileMatrix.zoom_level : null;
 };
 
 
@@ -345,7 +402,7 @@ plugin.geopackage.GeoPackageProvider.prototype.onFeatureInfo_ = function(err, in
 
     if (info['contents']) {
       config['title'] = info['contents']['identifier'] || config['title'];
-      config['description'] =  info['contents']['description'] || config['description'];
+      config['description'] = info['contents']['description'] || config['description'];
     }
 
     this.addDescriptor_(config);
