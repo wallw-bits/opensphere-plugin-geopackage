@@ -35,7 +35,7 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
       'extent': options.extent,
       'minZoom': Math.round(options['minZoom']),
       'resolutions': options['resolutions'],
-      'tileSizes': options['sizes']
+      'tileSizes': options['tileSizes']
     })),
     'wrapX': this.projection.isGlobal()
   }));
@@ -86,10 +86,11 @@ plugin.geopackage.getTileLoadFunction_ = function(providerId) {
 
   return (
     /**
-     * @param {ol.ImageTile} imageTile The image tile
+     * @param {ol.Tile} tile The image tile
      * @param {string} src The URL
      */
-    function(imageTile, src) {
+    function(tile, src) {
+      var imageTile = /** @type {ol.ImageTile} */ (tile);
       var prevSrc = imageTile.getImage().src;
       if (prevSrc) {
         // recycle it
