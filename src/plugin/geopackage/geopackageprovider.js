@@ -390,14 +390,28 @@ plugin.geopackage.GeoPackageProvider.prototype.onFeatureInfo_ = function(err, in
   if (info) {
     var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + info['tableName'];
 
+    var cols = info['columns'].map(function(col) {
+      return /** @type {os.ogc.FeatureTypeColumn} */ ({
+        type: col['dataType'].toLowerCase(),
+        name: col['name']
+      });
+    });
+
+    var animate = cols.some(function(col) {
+      return col.type === 'datetime';
+    });
+
     var config = {
       'id': id,
-      'type': plugin.geopackage.ID + '-feature',
+      'type': plugin.geopackage.ID + '-vector',
       'provider': this.getLabel(),
       'layerType': os.layer.LayerType.FEATURES,
-      'icons': os.ui.Icons.FEATURES,
+      'icons': os.ui.Icons.FEATURES + (animate ? os.ui.Icons.TIME : ''),
       'delayUpdateActive': true,
-      'title': info['tableName']
+      'title': info['tableName'],
+      'url': 'gpkg://' + this.getId() + '/' + info['tableName'],
+      'columns': cols,
+      'animate': animate
     };
 
     if (info['contents']) {

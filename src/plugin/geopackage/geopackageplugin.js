@@ -2,10 +2,15 @@ goog.provide('plugin.geopackage.GeoPackagePlugin');
 
 goog.require('os.data.DataManager');
 goog.require('os.data.ProviderEntry');
+goog.require('os.net.RequestHandlerFactory');
 goog.require('os.plugin.AbstractPlugin');
 goog.require('os.plugin.PluginManager');
+goog.require('plugin.geopackage');
+goog.require('plugin.geopackage.Exporter');
 goog.require('plugin.geopackage.GeoPackageProvider');
+goog.require('plugin.geopackage.RequestHandler');
 goog.require('plugin.geopackage.TileLayerConfig');
+goog.require('plugin.geopackage.VectorLayerConfig');
 
 
 /**
@@ -22,13 +27,6 @@ goog.inherits(plugin.geopackage.GeoPackagePlugin, os.plugin.AbstractPlugin);
 
 
 /**
- * @type {string}
- * @const
- */
-plugin.geopackage.ID = 'geopackage';
-
-
-/**
  * @inheritDoc
  */
 plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
@@ -38,11 +36,17 @@ plugin.geopackage.GeoPackagePlugin.prototype.init = function() {
       plugin.geopackage.ID,               // the type
       plugin.geopackage.GeoPackageProvider,   // the class
       'GeoPackage File', // the title
-      'Provides offline raster and vector data'  // the description
+      'Provides raster and vector data in a single file format'  // the description
       ));
 
   var lcm = os.layer.config.LayerConfigManager.getInstance();
   lcm.registerLayerConfig(plugin.geopackage.ID + '-tile', plugin.geopackage.TileLayerConfig);
+  lcm.registerLayerConfig(plugin.geopackage.ID + '-vector', plugin.geopackage.VectorLayerConfig);
+
+  os.net.RequestHandlerFactory.addHandler(plugin.geopackage.RequestHandler);
+
+  // register the GeoPackage exporter
+  os.ui.exportManager.registerExportMethod(new plugin.geopackage.Exporter());
 };
 
 

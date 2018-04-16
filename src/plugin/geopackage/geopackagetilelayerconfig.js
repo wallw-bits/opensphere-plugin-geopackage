@@ -30,7 +30,7 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
   var source = new ol.source.TileImage(/** @type {olx.source.TileImageOptions} */ ({
     'projection': this.projection,
     'tileLoadFunction': plugin.geopackage.getTileLoadFunction_(parts[0]),
-    'tileUrlFunction': plugin.geopackage.getTileUrlFunction_(parts[0], parts[1]),
+    'tileUrlFunction': plugin.geopackage.getTileUrlFunction_(parts[1]),
     'tileGrid': new ol.tilegrid.TileGrid(/** @type {olx.tilegrid.TileGridOptions} */ ({
       'extent': options.extent,
       'minZoom': Math.round(options['minZoom']),
@@ -45,81 +45,43 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
 
 
 /**
- * The logger.
- * @const
- * @type {goog.debug.Logger}
- * @private
- */
-plugin.geopackage.LOGGER_ = goog.log.getLogger('plugin.geopackage');
-
-
-/**
  * @param {string} providerId
  * @return {!ol.TileLoadFunctionType}
  * @private
  * @suppress {accessControls}
  */
 plugin.geopackage.getTileLoadFunction_ = function(providerId) {
-  // look up provider
-  var list = os.dataManager.getProviderRoot().getChildren();
-  if (!list) {
-    throw new Error('Provider does not exist!');
-  }
-
-  list = list.filter(function(p) {
-    return p.getId() === providerId;
-  });
-
-  if (!list || !list.length) {
-    throw new Error('Provider does not exist!');
-  }
-
-  if (!(list[0] instanceof plugin.geopackage.GeoPackageProvider)) {
-    throw new Error('Provider is not a GeoPackage provider!');
-  }
-
-  var gpkg = /** @type {plugin.geopackage.GeoPackageProvider} */ (list[0]).getGeoPackage();
-
-  if (!gpkg) {
-    throw new Error('Provider GeoPackage is not defined!');
-  }
+  var gpkg = plugin.geopackage.getGeoPackageByProviderId(providerId);
 
   return (
     /**
      * @param {ol.Tile} tile The image tile
-     * @param {string} src The URL
+     * @param {string} layerName The layer name
      */
-    function(tile, src) {
+    function(tile, layerName) {
       var imageTile = /** @type {ol.ImageTile} */ (tile);
       var prevSrc = imageTile.getImage().src;
       if (prevSrc) {
         // recycle it
         URL.revokeObjectURL(prevSrc);
-        imageTile.getImage().src = '';
       }
 
-      // GeoPackage tile layer URLs are formatted like: {providerId}/{layerName}/{z}/{y}/{x}
-      var parts = src.split(/\/+/);
 
-      if (parts.length === 5) {
-        var layerName = parts[1];
-        var z = parseInt(parts[2], 10);
-        var y = parseInt(parts[3], 10);
-        var x = parseInt(parts[4], 10);
-
+      if (layerName) {
         gpkg.getTileDaoWithTableName(layerName, function(err, tileDao) {
           if (err) {
-            goog.log.error(plugin.geopackage.LOGGER_, 'Error querying tileDao from GeoPackage: ' + String(err));
+            goog.log.error(plugin.geopackage.LOGGER, 'Error querying tileDao from GeoPackage: ' + String(err));
             imageTile.state = ol.TileState.ERROR;
             imageTile.changed();
             return;
           }
 
-          tileDao.queryForTile(x, y, z, function(err, tile) {
+          var tileCoord = imageTile.getTileCoord();
+          tileDao.queryForTile(tileCoord[1], -tileCoord[2] - 1, tileCoord[0], function(err, tile) {
             if (err) {
               imageTile.state = ol.TileState.ERROR;
               imageTile.changed();
-              goog.log.error(plugin.geopackage.LOGGER_, 'Error querying tile from GeoPackage:' + String(err));
+              goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + String(err));
               return;
             }
 
@@ -200,14 +162,11 @@ plugin.geopackage.isPNG = function(array) {
 
 
 /**
- * @param {string} providerId The GeoPackage provider id
  * @param {string} layerName The table name for the layer
  * @return {ol.TileUrlFunctionType}
  * @private
  */
-plugin.geopackage.getTileUrlFunction_ = function(providerId, layerName) {
-  var template = providerId + '/' + layerName + '/{z}/{y}/{x}';
-
+plugin.geopackage.getTileUrlFunction_ = function(layerName) {
   return (
     /**
      * @param {ol.TileCoord} tileCoord The tile coordinate
@@ -216,8 +175,6 @@ plugin.geopackage.getTileUrlFunction_ = function(providerId, layerName) {
      * @return {string|undefined} Tile URL
      */
     function(tileCoord, pixelRatio, projection) {
-      return template.replace('{z}', tileCoord[0].toString()).
-          replace('{x}', tileCoord[1].toString()).
-          replace('{y}', (-tileCoord[2] - 1).toString());
+      return layerName;
     });
 };

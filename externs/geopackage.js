@@ -22,6 +22,41 @@ geopackage.openGeoPackage = function(path, callback) {};
  */
 geopackage.openGeoPackageByteArray = function(array, callback) {};
 
+
+/**
+ * @param {string} path The path
+ * @param {function(*, GeoPackage):*} callback Called with `err, geopackage`
+ */
+geopackage.createGeoPackage = function(path, callback) {};
+
+
+/**
+ * @param {GeoPackage} gpkg The GeoPackage
+ * @param {string} tableName The table name
+ * @param {function(*, Object, function())} featureCallback The callback for each GeoJSON feature
+ * @param {function(*)} doneCallback The callback when the iteration finishes
+ */
+geopackage.iterateGeoJSONFeaturesFromTable = function(gpkg, tableName, featureCallback, doneCallback) {};
+
+
+/**
+ * @param {GeoPackage} gpkg The GeoPackage
+ * @param {Object} feature The GeoJSON feature to add
+ * @param {string} tableName The tableName to which to add the feature
+ * @param {function(*):*} callback Called with `err`
+ */
+geopackage.addGeoJSONFeatureToGeoPackage = function(gpkg, feature, tableName, callback) {};
+
+/**
+ * @param {GeoPackage} gpkg
+ * @param {string} tableName
+ * @param {geopackage.GeometryColumns} geometryColumns
+ * @param {Array<geopackage.FeatureColumn>} columns
+ * @param {function(*, GeoPackage.FeatureDao):*} callback
+ */
+geopackage.createFeatureTable = function(gpkg, tableName, geometryColumns, columns, callback) {};
+
+
 /**
  * @constructor
  */
@@ -31,6 +66,11 @@ var GeoPackage;
  * Close the database connection
  */
 GeoPackage.prototype.close = function() {};
+
+/**
+ * @param {function(*, Uint8Array):*} callback Called with `err, data`
+ */
+GeoPackage.prototype.export = function(callback) {};
 
 /**
  * @return {string} The name
@@ -107,6 +147,70 @@ GeoPackage.Tile.prototype.getTileData = function() {};
 
 
 /**
+ * @constructor
+ */
+geopackage.GeometryColumns;
+
+/**
+ * @type {string}
+ */
+geopackage.GeometryColumns.prototype.table_name;
+
+/**
+ * @type {string}
+ */
+geopackage.GeometryColumns.prototype.column_name;
+
+/**
+ * @type {string}
+ */
+geopackage.GeometryColumns.prototype.geometry_type_name;
+
+/**
+ * @type {number}
+ */
+geopackage.GeometryColumns.prototype.z;
+
+/**
+ * @type {number}
+ */
+geopackage.GeometryColumns.prototype.m;
+
+
+/**
+ * @constructor
+ */
+geopackage.FeatureColumn;
+
+/**
+ * @param {number} index The index
+ * @param {string} name The column name
+ * @return {geopackage.FeatureColumn}
+ */
+geopackage.FeatureColumn.createPrimaryKeyColumnWithIndexAndName = function(index, name) {};
+
+/**
+ * @param {number} index The index
+ * @param {string} columnName The column name
+ * @param {string} geometryTypeName The geometry type name
+ * @param {boolean} notNull
+ * @param {*} defaultValue
+ * @return {geopackage.FeatureColumn}
+ */
+geopackage.FeatureColumn.createGeometryColumn = function(index, columnName, geometryTypeName, notNull, defaultValue) {};
+
+/**
+ * @param {number} index The index
+ * @param {string} columnName The column name
+ * @param {number} dataType
+ * @param {boolean} notNull
+ * @param {*} defaultValue
+ * @return {geopackage.FeatureColumn}
+ */
+geopackage.FeatureColumn.createColumnWithIndex = function(index, columnName, dataType, notNull, defaultValue) {};
+
+
+/**
  * @typedef {{
  *  table_name: string
  * }}
@@ -127,3 +231,4 @@ GeoPackage.FeatureDao;
  * }}
  */
 GeoPackage.TileMatrix;
+
