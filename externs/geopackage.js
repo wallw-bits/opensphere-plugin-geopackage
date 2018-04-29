@@ -5,6 +5,29 @@
 
 
 /**
+ * @typedef {{
+ *  id: !string,
+ *  type: !string,
+ *  data: (ArrayBuffer|Object|undefined),
+ *  tileCoord: (Array<number>|undefined),
+ *  tableName: (string|undefined),
+ *  url: (string|undefined),
+ *  columns: ({field: string, type: string}|undefined)
+ * }}
+ */
+var GeoPackageWorkerMessage;
+
+/**
+ * @typedef {{
+ *  message: !GeoPackageWorkerMessage,
+ *  type: !string,
+ *  data: *,
+ *  reason: (string|undefined)
+ * }}
+ */
+var GeoPackageWorkerResponse;
+
+/**
  * @type {Object}
  * @const
  */

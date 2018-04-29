@@ -8,6 +8,7 @@ goog.require('os.net.Request');
 goog.require('os.ui.Icons');
 goog.require('os.ui.data.DescriptorNode');
 goog.require('os.ui.server.AbstractLoadingServer');
+goog.require('plugin.geopackage');
 
 
 /**
@@ -20,16 +21,12 @@ plugin.geopackage.GeoPackageProvider = function() {
   this.log = plugin.geopackage.GeoPackageProvider.LOGGER_;
 
   /**
-   * @type {GeoPackage}
    * @private
    */
-  this.geopkg_ = null;
+  this.workerHandler_ = this.onWorkerMessage_.bind(this);
 
-  /**
-   * @type {number}
-   * @private
-   */
-  this.itemsRemaining_ = 0;
+  var w = plugin.geopackage.getWorker();
+  w.addEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
 };
 goog.inherits(plugin.geopackage.GeoPackageProvider, os.ui.server.AbstractLoadingServer);
 goog.addSingletonGetter(plugin.geopackage.GeoPackageProvider);
@@ -45,10 +42,18 @@ plugin.geopackage.GeoPackageProvider.LOGGER_ = goog.log.getLogger('plugin.geopac
 
 
 /**
- * @return {GeoPackage}
+ * @protected
  */
-plugin.geopackage.GeoPackageProvider.prototype.getGeoPackage = function() {
-  return this.geopkg_;
+plugin.geopackage.GeoPackageProvider.prototype.disposeInternal = function() {
+  // close any previously-opened versions
+  var worker = plugin.geopackage.getWorker();
+  worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+    id: this.getId(),
+    type: plugin.geopackage.MsgType.CLOSE
+  }));
+
+  worker.removeEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
+  plugin.geopackage.GeoPackageProvider.base(this, 'disposeInternal');
 };
 
 
@@ -66,18 +71,26 @@ plugin.geopackage.GeoPackageProvider.prototype.configure = function(config) {
  */
 plugin.geopackage.GeoPackageProvider.prototype.load = function(opt_ping) {
   plugin.geopackage.GeoPackageProvider.base(this, 'load', opt_ping);
-  this.itemsRemaining_ = 0;
   this.setLoading(true);
 
-  var isNode = false;
-  // try {
-  //   isNode = Object.prototype.toString.call(global.process) === '[object process]';
-  // } catch (e) {
-  // }
+  var isNode = navigator.userAgent.toLowerCase().indexOf(' electron') > -1;
+  var url = this.getUrl();
 
-  if (isNode) {
-    // var geopackage = require('@ngageoint/geopackage');
-    // geopackage.openGeoPackage(this.url, this.onLoad_.bind(this));
+  if (isNode && os.file.isFileSystem(url)) {
+    var worker = plugin.geopackage.getWorker();
+
+    // close any previously-opened versions
+    worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+      id: this.getId(),
+      type: plugin.geopackage.MsgType.CLOSE
+    }));
+
+    // open the DB
+    worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+      id: this.getId(),
+      type: plugin.geopackage.MsgType.OPEN,
+      url: url
+    }));
   } else {
     var request = new os.net.Request(this.getUrl());
     request.setHeader('Accept', '*/*');
@@ -88,6 +101,30 @@ plugin.geopackage.GeoPackageProvider.prototype.load = function(opt_ping) {
   }
 };
 
+/**
+ * @param {Event|GeoPackageWorkerMessage} e
+ */
+plugin.geopackage.GeoPackageProvider.prototype.onWorkerMessage_ = function(e) {
+  var msg = /** @type {GeoPackageWorkerResponse} */ (e instanceof Event ? e.data : e);
+  var worker = plugin.geopackage.getWorker();
+
+  if (msg.message.id === this.getId()) {
+    if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
+      if (msg.message.type === plugin.geopackage.MsgType.OPEN) {
+        worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+          id: this.getId(),
+          type: plugin.geopackage.MsgType.LIST_DESCRIPTORS
+        }));
+      } else if (msg.message.type === plugin.geopackage.MsgType.LIST_DESCRIPTORS) {
+        var configs = /** @type {Array<Object<string, *>>} */ (msg.data);
+        configs.forEach(this.addDescriptor_, this);
+        this.finish();
+      }
+    } else {
+      this.logError(msg.message.id + ' ' + msg.message.type + ' failed! ' + msg.reason);
+    }
+  }
+};
 
 /**
  * @inheritDoc
@@ -122,7 +159,20 @@ plugin.geopackage.GeoPackageProvider.prototype.onUrl_ = function(event) {
   goog.dispose(req);
 
   if (response instanceof ArrayBuffer) {
-    geopackage.openGeoPackageByteArray(new Uint8Array(response), this.onLoad_.bind(this));
+    var worker = plugin.geopackage.getWorker();
+
+    // close any previously-opened versions
+    worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+      id: this.getId(),
+      type: plugin.geopackage.MsgType.CLOSE
+    }));
+
+    // open the DB
+    worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+      id: this.getId(),
+      type: plugin.geopackage.MsgType.OPEN,
+      data: response
+    }), [response]);
   }
 };
 
@@ -171,269 +221,28 @@ plugin.geopackage.GeoPackageProvider.prototype.logError = function(msg) {
 
 
 /**
- * @param {*} err The error message, if any
- * @param {GeoPackage} gpkg The GeoPackage
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onLoad_ = function(err, gpkg) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  this.geopkg_ = gpkg;
-
-  this.setChildren(null);
-  this.geopkg_.getTileTables(this.onTileTables_.bind(this));
-  this.geopkg_.getFeatureTables(this.onFeatureTables_.bind(this));
-};
-
-
-/**
- * @param {*} err The error message, if any
- * @param {Array<!string>} tileTables The list of tile tables
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onTileTables_ = function(err, tileTables) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (tileTables) {
-    var handler = this.onTileDao_.bind(this);
-    var gpkg = this.geopkg_;
-
-    this.itemsRemaining_ += tileTables.length;
-
-    tileTables.forEach(function(tileTable) {
-      gpkg.getTileDaoWithTableName(tileTable, handler);
-    });
-  }
-};
-
-
-/**
- * @param {*} err Error message, if any
- * @param {GeoPackage.TileDao} tileDao The tile data access object
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onTileDao_ = function(err, tileDao) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (tileDao) {
-    this.geopkg_.getInfoForTable(tileDao, this.onTileInfo_.bind(this, tileDao));
-  }
-};
-
-
-/**
- * @param {GeoPackage.TileDao} tileDao The tile data access object
- * @param {*} err Error message, if any
- * @param {Object<string, *>} info
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onTileInfo_ = function(tileDao, err, info) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (info) {
-    var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + info['tableName'];
-
-    var tileMatrices = tileDao.zoomLevelToTileMatrix;
-
-    var config = {
-      'id': id,
-      'type': plugin.geopackage.ID + '-tile',
-      'provider': this.getLabel(),
-      'layerType': os.layer.LayerType.TILES,
-      'icons': os.ui.Icons.TILES,
-      'delayUpdateActive': true,
-      'title': info['tableName'],
-      'minZoom': Math.round(info['minZoom']),
-      'maxZoom': Math.round(info['maxZoom']),
-      'resolutions': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToResolution),
-      'matrixIds': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToId),
-      'tileSizes': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToTileSize),
-      'widths': tileMatrices.map(plugin.geopackage.GeoPackageProvider.tileMatrixToWidth)
-    };
-
-    if (info['contents']) {
-      config['title'] = info['contents']['identifier'] || config['title'];
-      config['description'] = info['contents']['description'] || config['description'];
-    }
-
-    if (info['srs']) {
-      config['projection'] = info['srs']['organization'].toUpperCase() + ':' +
-          (info['srs']['organization_coordsys_id'] || info['srs']['id']);
-    }
-
-    if (info['tileMatrixSet']) {
-      config['extent'] = [
-        info['tileMatrixSet']['minX'],
-        info['tileMatrixSet']['minY'],
-        info['tileMatrixSet']['maxX'],
-        info['tileMatrixSet']['maxY']];
-
-      config['extentProjection'] = config['projection'] || 'EPSG:' + info['tileMatrixSet']['srsId'];
-    }
-
-    // TODO: is there a way to determine whether the layer is opaque (i.e. should be a base map)?
-    this.addDescriptor_(config);
-  }
-
-  if (this.itemsRemaining_ === 0) {
-    this.finish();
-  }
-};
-
-
-/**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number} resolution
- */
-plugin.geopackage.GeoPackageProvider.tileMatrixToResolution = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.pixel_x_size : null;
-};
-
-
-/**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?(number|ol.Size)} The tile size
- */
-plugin.geopackage.GeoPackageProvider.tileMatrixToTileSize = function(tileMatrix) {
-  if (!tileMatrix) {
-    return null;
-  }
-
-  var h = tileMatrix.tile_height;
-  var w = tileMatrix.tile_width;
-  return w === h ? w : [w, h];
-};
-
-
-/**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number} The matrix width
- */
-plugin.geopackage.GeoPackageProvider.tileMatrixToWidth = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.matrix_width : null;
-};
-
-
-/**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number}
- */
-plugin.geopackage.GeoPackageProvider.tileMatrixToId = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.zoom_level : null;
-};
-
-
-/**
- * @param {*} err The error message, if any
- * @param {Array<!string>} featureTables The list of feature tables
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onFeatureTables_ = function(err, featureTables) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (featureTables) {
-    var handler = this.onFeatureDao_.bind(this);
-    var gpkg = this.geopkg_;
-
-    this.itemsRemaining_ += featureTables.length;
-
-    featureTables.forEach(function(featureTable) {
-      gpkg.getFeatureDaoWithTableName(featureTable, handler);
-    });
-  }
-};
-
-
-/**
- * @param {*} err The error message, if any
- * @param {GeoPackage.FeatureDao} featureDao The feature data access object
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onFeatureDao_ = function(err, featureDao) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (featureDao) {
-    this.geopkg_.getInfoForTable(featureDao, this.onFeatureInfo_.bind(this));
-  }
-};
-
-
-/**
- * @param {*} err The error message, if any
- * @param {Object<string, *>} info
- * @private
- */
-plugin.geopackage.GeoPackageProvider.prototype.onFeatureInfo_ = function(err, info) {
-  if (err) {
-    this.logError(err);
-    return;
-  }
-
-  if (info) {
-    var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + info['tableName'];
-
-    var cols = info['columns'].map(function(col) {
-      return /** @type {os.ogc.FeatureTypeColumn} */ ({
-        type: col['dataType'].toLowerCase(),
-        name: col['name']
-      });
-    });
-
-    var animate = cols.some(function(col) {
-      return col.type === 'datetime';
-    });
-
-    var config = {
-      'id': id,
-      'type': plugin.geopackage.ID + '-vector',
-      'provider': this.getLabel(),
-      'layerType': os.layer.LayerType.FEATURES,
-      'icons': os.ui.Icons.FEATURES + (animate ? os.ui.Icons.TIME : ''),
-      'delayUpdateActive': true,
-      'title': info['tableName'],
-      'url': 'gpkg://' + this.getId() + '/' + info['tableName'],
-      'columns': cols,
-      'animate': animate
-    };
-
-    if (info['contents']) {
-      config['title'] = info['contents']['identifier'] || config['title'];
-      config['description'] = info['contents']['description'] || config['description'];
-    }
-
-    this.addDescriptor_(config);
-  }
-
-  if (this.itemsRemaining_ === 0) {
-    this.finish();
-  }
-};
-
-
-/**
  * @param {Object<string, *>} config The layer config
  * @private
  */
 plugin.geopackage.GeoPackageProvider.prototype.addDescriptor_ = function(config) {
-  var id = /** @type {string} */ (config['id']);
+  var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + config['title'];
+  config['id'] = id;
+  config['delayUpdateActive'] = true;
+  config['provider'] = this.getLabel();
+
+  if (config['type'] === plugin.geopackage.ID + '-tile') {
+    config['layerType'] = os.layer.LayerType.TILES;
+    config['icons'] = os.ui.Icons.TILES;
+  } else if (config['type'] === plugin.geopackage.ID + '-vector') {
+    var animate = config['dbColumns'].some(function(col) {
+      return col['type'] === 'datetime';
+    });
+
+    config['layerType'] = os.layer.LayerType.FEATURES;
+    config['icons'] = os.ui.Icons.FEATURES + (animate ? os.ui.Icons.TIME : '');
+    config['url'] = 'gpkg://' + this.getId() + '/' + config['title'];
+    config['animate'] = animate;
+  }
 
   if (id) {
     var descriptor = /** @type {os.data.ConfigDescriptor} */ (os.dataManager.getDescriptor(id));
@@ -449,6 +258,5 @@ plugin.geopackage.GeoPackageProvider.prototype.addDescriptor_ = function(config)
     node.setDescriptor(descriptor);
 
     this.addChild(node);
-    this.itemsRemaining_--;
   }
 };

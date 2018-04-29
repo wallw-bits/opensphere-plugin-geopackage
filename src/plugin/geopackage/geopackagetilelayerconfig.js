@@ -51,8 +51,6 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
  * @suppress {accessControls}
  */
 plugin.geopackage.getTileLoadFunction_ = function(providerId) {
-  var gpkg = plugin.geopackage.getGeoPackageByProviderId(providerId);
-
   return (
     /**
      * @param {ol.Tile} tile The image tile
@@ -66,98 +64,58 @@ plugin.geopackage.getTileLoadFunction_ = function(providerId) {
         URL.revokeObjectURL(prevSrc);
       }
 
-
       if (layerName) {
-        gpkg.getTileDaoWithTableName(layerName, function(err, tileDao) {
-          if (err) {
-            goog.log.error(plugin.geopackage.LOGGER, 'Error querying tileDao from GeoPackage: ' + String(err));
-            imageTile.state = ol.TileState.ERROR;
-            imageTile.changed();
-            return;
-          }
+        var worker = plugin.geopackage.getWorker();
+        var tileCoord = imageTile.getTileCoord();
 
-          var tileCoord = imageTile.getTileCoord();
-          tileDao.queryForTile(tileCoord[1], -tileCoord[2] - 1, tileCoord[0], function(err, tile) {
-            if (err) {
+        /**
+         * @param {Event|GeoPackageWorkerResponse} evt
+         */
+        var onMessage = function(evt) {
+          var msg = /** @type {GeoPackageWorkerResponse} */ (evt instanceof Event ? evt.data : evt);
+
+          if (msg.message.id === providerId && msg.message.type === plugin.geopackage.MsgType.GET_TILE &&
+              msg.message.tableName === layerName && tileCoord.join(',') === msg.message.tileCoord.join(',')) {
+            worker.removeEventListener(goog.events.EventType.MESSAGE, onMessage);
+
+            if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
+              if (msg.data) {
+                var url = null;
+
+                if (goog.isString(msg.data)) {
+                  url = msg.data;
+                } else if (goog.isArray(msg.data)) {
+                  var i32arr = Int32Array.from(/** @type {!Array<!number>} */ (msg.data));
+                  var i8arr = new Uint8Array(i32arr);
+                  var blob = new Blob([i8arr]);
+                  url = URL.createObjectURL(blob);
+                }
+
+                if (url) {
+                  imageTile.getImage().src = url;
+                }
+              } else {
+                // empty
+                imageTile.state = ol.TileState.LOADED;
+                imageTile.changed();
+              }
+            } else {
               imageTile.state = ol.TileState.ERROR;
               imageTile.changed();
-              goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + String(err));
-              return;
+              goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
             }
+          }
+        };
 
-            if (!tile) {
-              // no tile data, finish loading
-              imageTile.state = ol.TileState.LOADED;
-              imageTile.changed();
-              return;
-            }
-
-            var array = tile.getTileData();
-
-            // determine the image type
-            var type;
-            if (plugin.geopackage.isJPEG(array)) {
-              type = 'image/jpeg';
-            } else if (plugin.geopackage.isPNG(array)) {
-              type = 'image/png';
-            }
-
-            var blob = new Blob([array], {type: type});
-            imageTile.getImage().src = URL.createObjectURL(blob);
-          });
-        });
+        worker.addEventListener(goog.events.EventType.MESSAGE, onMessage);
+        worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+          id: providerId,
+          type: plugin.geopackage.MsgType.GET_TILE,
+          tableName: layerName,
+          tileCoord: tileCoord
+        }));
       }
     });
-};
-
-
-/**
- * @param {Uint8Array} array Byte data
- * @return {boolean} Whether or not the image is a JPEG
- */
-plugin.geopackage.isJPEG = function(array) {
-  if (!array) {
-    return false;
-  }
-
-  // JPEGs should begin with FFD8 and end with FFD9
-  var begin = [0xFF, 0xD8];
-  var end = [0xFF, 0xD9];
-
-  for (var i = 0, n = Math.min(begin.length, array.length); i < n; i++) {
-    if (array[i] !== begin[i]) {
-      return false;
-    }
-  }
-
-  for (i = array.length - end.length, n = array.length; i < n; i++) {
-    if (array[i] !== end[i]) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-
-/**
- * @param {Uint8Array} array Byte data
- * @return {boolean} Whether or not the image is a PNG
- */
-plugin.geopackage.isPNG = function(array) {
-  if (!array) {
-    return false;
-  }
-
-  // all PNG files should begin with 89 50 4E 47 0D 0A 1A 0A
-  var check = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-  for (var i = 0, n = Math.min(check.length, array.length); i < n; i++) {
-    if (array[i] !== check[i]) {
-      return false;
-    }
-  }
-
-  return true;
 };
 
 

@@ -5,6 +5,7 @@ goog.require('os.data.ProviderEntry');
 goog.require('os.net.RequestHandlerFactory');
 goog.require('os.plugin.AbstractPlugin');
 goog.require('os.plugin.PluginManager');
+goog.require('os.ui.exportManager');
 goog.require('plugin.geopackage');
 goog.require('plugin.geopackage.Exporter');
 goog.require('plugin.geopackage.GeoPackageProvider');

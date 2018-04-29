@@ -1,6 +1,7 @@
 goog.require('plugin.geopackage.GeoPackageProvider');
 
 describe('plugin.geopackage.GeoPackageProvider', function() {
+  plugin.geopackage.ROOT = 'base/';
   var baseUrl = '/base/test/resources/geopackage/';
 
   it('should configure properly', function() {
@@ -25,7 +26,7 @@ describe('plugin.geopackage.GeoPackageProvider', function() {
     var count = 0;
     var listener = function(e) {
       count++;
-    }
+    };
 
     p.listen(os.data.DataProviderEventType.LOADED, listener);
 
@@ -125,7 +126,7 @@ describe('plugin.geopackage.GeoPackageProvider', function() {
         id: prefix + 'point2d',
         title: 'point2d',
         layerType: os.layer.LayerType.FEATURES,
-        icons: os.ui.Icons.FEATURES
+        icons: os.ui.Icons.FEATURES + os.ui.Icons.TIME
       }, {
         id: prefix + 'point3d',
         title: 'point3d',
@@ -153,7 +154,7 @@ describe('plugin.geopackage.GeoPackageProvider', function() {
         for (var key in expected[i]) {
           expect(config[key]).toEqual(expected[i][key]);
         }
-      };
+      }
     });
   });
 
@@ -170,7 +171,7 @@ describe('plugin.geopackage.GeoPackageProvider', function() {
         p.logError(1234);
       }, function() {
         p.logError('This is only a test message');
-      }]
+      }];
 
     fns.forEach(function(fn) {
       expect(fn).not.toThrow();

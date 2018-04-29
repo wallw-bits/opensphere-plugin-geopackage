@@ -23,7 +23,7 @@ goog.inherits(plugin.geopackage.VectorLayerConfig, plugin.file.geojson.GeoJSONLa
 plugin.geopackage.VectorLayerConfig.prototype.getLayer = function(source, options) {
   var featureType = new os.ogc.wfs.FeatureType(
       /** @type {string} */ (options['id']),
-      /** @type {Array<!os.ogc.FeatureTypeColumn>} */ (options['columns']));
+      /** @type {Array<!os.ogc.FeatureTypeColumn>} */ (options['dbColumns']));
 
   var layer = plugin.geopackage.VectorLayerConfig.base(this, 'getLayer', source, options);
 

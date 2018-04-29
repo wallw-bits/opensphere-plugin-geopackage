@@ -33,6 +33,23 @@ plugin.geopackage.RequestHandler = function() {
    * @protected
    */
   this.features = null;
+
+  /**
+   * @private
+   */
+  this.workerHandler_ = this.onMessage.bind(this);
+
+  /**
+   * @type {string}
+   * @protected
+   */
+  this.lastId = '';
+
+  /**
+   * @type {string}
+   * @protected
+   */
+  this.lastTableName = '';
 };
 goog.inherits(plugin.geopackage.RequestHandler, goog.events.EventTarget);
 
@@ -44,6 +61,16 @@ goog.inherits(plugin.geopackage.RequestHandler, goog.events.EventTarget);
  * @private
  */
 plugin.geopackage.RequestHandler.LOGGER_ = goog.log.getLogger('plugin.geopackage.RequestHandler');
+
+
+/**
+ * @inheritDoc
+ */
+plugin.geopackage.RequestHandler.prototype.disposeInternal = function() {
+  var worker = plugin.geopackage.getWorker();
+  worker.removeEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
+  plugin.geopackage.RequestHandler.base(this, 'disposeInternal');
+};
 
 
 /**
@@ -127,61 +154,52 @@ plugin.geopackage.RequestHandler.prototype.abort = goog.nullFunction;
  */
 plugin.geopackage.RequestHandler.prototype.execute = function(method, uri, opt_headers, opt_formatter,
     opt_nocache, opt_responseType) {
-  var providerId = uri.getDomain();
-  // skip the leading slash in the path for the tableName
-  var tableName = uri.getPath().substring(1);
+  var worker = plugin.geopackage.getWorker();
+  worker.addEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
 
-  try {
-    var gpkg = plugin.geopackage.getGeoPackageByProviderId(providerId);
-  } catch (e) {
-    this.statusCode = 404;
-    this.errors.push(e.message);
-    this.dispatchEvent(goog.net.EventType.ERROR);
-    return;
-  }
+  this.lastId = uri.getDomain();
+  this.lastTableName = uri.getPath().substring(1);
 
-  geopackage.iterateGeoJSONFeaturesFromTable(gpkg, tableName, this.onFeature_.bind(this), this.onDone_.bind(this));
+  worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+    id: this.lastId,
+    type: plugin.geopackage.MsgType.GET_FEATURES,
+    tableName: this.lastTableName
+  }));
 };
 
 
 /**
- * @param {*} err
- * @param {Object} geoJson The GeoJSON object
- * @param {function()} rowDone The row done callback
- * @private
+ * @param {Event|GeoPackageWorkerResponse} e
+ * @protected
  */
-plugin.geopackage.RequestHandler.prototype.onFeature_ = function(err, geoJson, rowDone) {
-  if (err) {
-    this.errors.push(String(err));
-    this.statusCode = 500;
-  }
+plugin.geopackage.RequestHandler.prototype.onMessage = function(e) {
+  var msg = /** @type {GeoPackageWorkerResponse} */ (e instanceof window.Event ? e.data : e);
 
-  if (geoJson) {
-    if ('geometry' in geoJson['properties']) {
-      // this will really screw up the resulting feature
-      delete geoJson['properties']['geometry'];
+  if (msg.message.id === this.lastId && msg.message.tableName === this.lastTableName) {
+    var worker = plugin.geopackage.getWorker();
+
+    if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
+      if (msg.data === 0) {
+        // finished
+        worker.removeEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
+        this.dispatchEvent(goog.net.EventType.SUCCESS);
+      } else if (msg.data) {
+        if ('geometry' in msg.data['properties']) {
+          // this will really screw up the resulting feature
+          delete msg.data['properties']['geometry'];
+        }
+
+        if (!this.features) {
+          this.features = [];
+        }
+
+        this.features.push(msg.data);
+      }
+    } else {
+      worker.removeEventListener(goog.events.EventType.MESSAGE, this.workerHandler_);
+      this.errors.push(String(msg.reason));
+      this.statusCode = 500;
+      this.dispatchEvent(goog.net.EventType.ERROR);
     }
-
-    if (!this.features) {
-      this.features = [];
-    }
-
-    this.features.push(geoJson);
   }
-
-  rowDone();
-};
-
-
-/**
- * @param {*} err
- * @private
- */
-plugin.geopackage.RequestHandler.prototype.onDone_ = function(err) {
-  if (err) {
-    this.errors.push(String(err));
-    this.statusCode = 500;
-  }
-
-  this.dispatchEvent(this.getErrors() ? goog.net.EventType.ERROR : goog.net.EventType.SUCCESS);
 };
