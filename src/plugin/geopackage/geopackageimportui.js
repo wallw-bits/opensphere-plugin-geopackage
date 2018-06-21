@@ -1,0 +1,79 @@
+goog.provide('plugin.geopackage.GeoPackageImportUI');
+
+goog.require('os.alert.AlertEventSeverity');
+goog.require('os.ui.im.AbstractImportUI');
+goog.require('os.ui.menu.windows');
+goog.require('plugin.geopackage');
+goog.require('plugin.geopackage.GeoPackageProvider');
+
+/**
+ * @constructor
+ * @extends {os.ui.im.AbstractImportUI}
+ */
+plugin.geopackage.GeoPackageImportUI = function() {
+  /**
+   * @type {boolean}
+   */
+  this.requiresStorage = !os.file.FILE_URL_ENABLED;
+
+  /**
+   * @type {os.file.File}
+   * @protected
+   */
+  this.file = null;
+};
+goog.inherits(plugin.geopackage.GeoPackageImportUI, os.ui.im.AbstractImportUI);
+
+
+/**
+ * @inheritDoc
+ */
+plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_config) {
+  if (file) {
+    this.file = file;
+    if (os.file.isLocal(file) && this.requiresStorage) {
+      os.file.FileStorage.getInstance().storeFile(file, true).addCallbacks(
+          this.onFileReady, this.onFileError, this);
+    } else {
+      this.onFileReady();
+    }
+  }
+};
+
+
+/**
+ * @protected
+ */
+plugin.geopackage.GeoPackageImportUI.prototype.onFileReady = function() {
+  var file = this.file;
+  var conf = {
+    'type': plugin.geopackage.ID,
+    'label': file.getFileName(),
+    'url': file.getUrl()
+  };
+
+  var provider = new plugin.geopackage.GeoPackageProvider();
+  provider.configure(conf);
+  provider.setId(goog.string.getRandomString());
+  provider.setEnabled(true);
+  provider.setEditable(true);
+  provider.load();
+
+  os.dataManager.addProvider(provider);
+
+  os.alertManager.sendAlert(file.getFileName() + ' GeoPackage added!',
+      os.alert.AlertEventSeverity.INFO);
+
+  os.ui.menu.windows.openWindow('addData');
+  this.file = null;
+};
+
+
+/**
+ * @param {*=} opt_reason
+ * @protected
+ */
+plugin.geopackage.GeoPackageImportUI.prototype.onFileError = function(opt_reason) {
+  os.alertManager.sendAlert('Error adding GeoPackage. ' + opt_reason);
+  this.file = null;
+};

@@ -108,6 +108,7 @@ plugin.geopackage.getTileLoadFunction_ = function(providerId) {
         };
 
         worker.addEventListener(goog.events.EventType.MESSAGE, onMessage);
+
         worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
           id: providerId,
           type: plugin.geopackage.MsgType.GET_TILE,

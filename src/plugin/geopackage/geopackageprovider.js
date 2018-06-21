@@ -42,7 +42,7 @@ plugin.geopackage.GeoPackageProvider.LOGGER_ = goog.log.getLogger('plugin.geopac
 
 
 /**
- * @protected
+ * @inheritDoc
  */
 plugin.geopackage.GeoPackageProvider.prototype.disposeInternal = function() {
   // close any previously-opened versions

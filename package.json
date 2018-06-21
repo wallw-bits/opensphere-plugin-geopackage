@@ -14,9 +14,6 @@
     "type": "plugin",
     "pluggable": false,
     "index": "index.js",
-    "config": [
-      "config/settings.json"
-    ],
     "gcc": {
       "entry_point": [
         "goog:plugin.geopackage.GeoPackagePlugin"

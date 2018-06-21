@@ -176,24 +176,6 @@ var tileMatrixToTileSize = function(tileMatrix) {
 
 
 /**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number} The matrix width
- */
-var tileMatrixToWidth = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.matrix_width : null;
-};
-
-
-/**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number}
- */
-var tileMatrixToId = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.zoom_level : null;
-};
-
-
-/**
  * OpenLayers does not permit resolution arrays with null/undefined values.
  * We'll invent some numbers. The minZoom will save the invented numbers from
  * actually being accessed in any real sense.
@@ -254,9 +236,7 @@ var listDescriptors = function(msg) {
           minZoom: Math.round(info.minZoom),
           maxZoom: Math.round(info.maxZoom),
           resolutions: fixResolutions(tileMatrices.map(tileMatrixToResolution)),
-          matrixIds: tileMatrices.map(tileMatrixToId),
-          tileSizes: tileMatrices.map(tileMatrixToTileSize),
-          widths: tileMatrices.map(tileMatrixToWidth)
+          tileSizes: tileMatrices.map(tileMatrixToTileSize)
         };
 
         if (info.contents) {

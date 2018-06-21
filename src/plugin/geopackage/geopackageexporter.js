@@ -245,7 +245,6 @@ plugin.geopackage.Exporter.prototype.parseNext_ = function() {
     return;
   }
 
-
   if (!(tableName in this.tables_)) {
     worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
       id: this.lastId,
