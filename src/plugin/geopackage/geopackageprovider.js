@@ -233,6 +233,8 @@ plugin.geopackage.GeoPackageProvider.prototype.addDescriptor_ = function(config)
   if (config['type'] === plugin.geopackage.ID + '-tile') {
     config['layerType'] = os.layer.LayerType.TILES;
     config['icons'] = os.ui.Icons.TILES;
+    config['minZoom'] = Math.max(config['minZoom'], 0);
+    config['maxZoom'] = Math.min(config['maxZoom'], 42);
   } else if (config['type'] === plugin.geopackage.ID + '-vector') {
     var animate = config['dbColumns'].some(function(col) {
       return col['type'] === 'datetime';
