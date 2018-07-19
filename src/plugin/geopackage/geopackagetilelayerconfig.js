@@ -2,6 +2,8 @@ goog.provide('plugin.geopackage.TileLayerConfig');
 
 goog.require('goog.log');
 goog.require('goog.log.Logger');
+goog.require('ol.ImageTile');
+goog.require('ol.TileState');
 goog.require('ol.source.TileImage');
 goog.require('ol.tilegrid.TileGrid');
 goog.require('os.layer.config.AbstractTileLayerConfig');
@@ -33,7 +35,7 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
     'tileUrlFunction': plugin.geopackage.getTileUrlFunction_(parts[1]),
     'tileGrid': new ol.tilegrid.TileGrid(/** @type {olx.tilegrid.TileGridOptions} */ ({
       'extent': options.extent,
-      'minZoom': Math.round(options['minZoom']),
+      'minZoom': Math.max(0, Math.round(options['minZoom'])),
       'resolutions': options['resolutions'],
       'tileSizes': options['tileSizes']
     })),
@@ -95,13 +97,15 @@ plugin.geopackage.getTileLoadFunction_ = function(providerId) {
                   imageTile.getImage().src = url;
                 }
               } else {
-                // empty
+                // Tile is emtpy, so display a blank image. Note that ol.TileState.EMPTY is NOT WHAT WE WANT.
+                // Empty causes OpenLayers to keep displaying the parent tile for coverage. We want a blank
+                // tile.
+                imageTile.image_ = ol.ImageTile.getBlankImage();
                 imageTile.state = ol.TileState.LOADED;
                 imageTile.changed();
               }
             } else {
-              imageTile.state = ol.TileState.ERROR;
-              imageTile.changed();
+              imageTile.handleImageError_();
               goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
             }
           }
