@@ -152,11 +152,28 @@ var closeGpkg = function(msg) {
 
 
 /**
- * @param {?GeoPackage.TileMatrix} tileMatrix
- * @return {?number} resolution
+ * @param {Object} info
+ * @return {function(?GeoPackage.TileMatrix):?number}
  */
-var tileMatrixToResolution = function(tileMatrix) {
-  return tileMatrix ? tileMatrix.pixel_x_size : null;
+var getTileMatrixToResolutionMapper = function(info) {
+  return (
+    /**
+     * @param {?GeoPackage.TileMatrix} tileMatrix
+     * @return {?number} resolution
+     */
+    function(tileMatrix) {
+      if (tileMatrix) {
+        if (tileMatrix.pixel_x_size) {
+          return tileMatrix.pixel_x_size;
+        } else {
+          // compute the pixel_x_size from other values
+          return (info.tileMatrixSet.maxX - info.tileMatrixSet.minX) /
+              (tileMatrix.matrix_width * tileMatrix.tile_width);
+        }
+      }
+
+      return null;
+    });
 };
 
 
@@ -260,7 +277,7 @@ var listDescriptors = function(msg) {
           tableName: info.tableName,
           minZoom: Math.round(info.minZoom),
           maxZoom: Math.round(info.maxZoom),
-          resolutions: fixResolutions(tileMatrices.map(tileMatrixToResolution)),
+          resolutions: fixResolutions(tileMatrices.map(getTileMatrixToResolutionMapper(info))),
           tileSizes: fixSizes(tileMatrices.map(tileMatrixToTileSize))
         };
 
