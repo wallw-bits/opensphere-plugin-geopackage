@@ -1,6 +1,8 @@
 goog.provide('plugin.geopackage.GeoPackageImportUI');
 
 goog.require('os.alert.AlertEventSeverity');
+goog.require('os.file');
+goog.require('os.file.FileStorage');
 goog.require('os.ui.im.AbstractImportUI');
 goog.require('os.ui.menu.windows');
 goog.require('plugin.geopackage');
@@ -31,7 +33,7 @@ goog.inherits(plugin.geopackage.GeoPackageImportUI, os.ui.im.AbstractImportUI);
 plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_config) {
   if (file) {
     this.file = file;
-    if (os.file.isLocal(file) && this.requiresStorage) {
+    if (os.file.isLocal(file)) {
       os.file.FileStorage.getInstance().storeFile(file, true).addCallbacks(
           this.onFileReady, this.onFileError, this);
     } else {
@@ -46,6 +48,7 @@ plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_con
  */
 plugin.geopackage.GeoPackageImportUI.prototype.onFileReady = function() {
   var file = this.file;
+
   var conf = {
     'type': plugin.geopackage.ID,
     'label': file.getFileName(),
