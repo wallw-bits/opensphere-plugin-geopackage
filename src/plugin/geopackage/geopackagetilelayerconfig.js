@@ -1,7 +1,6 @@
 goog.provide('plugin.geopackage.TileLayerConfig');
 
 goog.require('goog.log');
-goog.require('goog.log.Logger');
 goog.require('ol.ImageTile');
 goog.require('ol.TileState');
 goog.require('ol.source.TileImage');
@@ -42,6 +41,7 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
     'wrapX': this.projection.isGlobal()
   }));
 
+  plugin.geopackage.addTileListener_();
   return source;
 };
 
@@ -50,7 +50,6 @@ plugin.geopackage.TileLayerConfig.prototype.getSource = function(options) {
  * @param {string} providerId
  * @return {!ol.TileLoadFunctionType}
  * @private
- * @suppress {accessControls}
  */
 plugin.geopackage.getTileLoadFunction_ = function(providerId) {
   return (
@@ -67,60 +66,91 @@ plugin.geopackage.getTileLoadFunction_ = function(providerId) {
       }
 
       if (layerName) {
-        var worker = plugin.geopackage.getWorker();
-        var tileCoord = imageTile.getTileCoord();
-
-        /**
-         * @param {Event|GeoPackageWorkerResponse} evt
-         */
-        var onMessage = function(evt) {
-          var msg = /** @type {GeoPackageWorkerResponse} */ (evt instanceof Event ? evt.data : evt);
-
-          if (msg.message.id === providerId && msg.message.type === plugin.geopackage.MsgType.GET_TILE &&
-              msg.message.tableName === layerName && tileCoord.join(',') === msg.message.tileCoord.join(',')) {
-            worker.removeEventListener(goog.events.EventType.MESSAGE, onMessage);
-
-            if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
-              if (msg.data) {
-                var url = null;
-
-                if (goog.isString(msg.data)) {
-                  url = msg.data;
-                } else if (goog.isArray(msg.data)) {
-                  var i32arr = Int32Array.from(/** @type {!Array<!number>} */ (msg.data));
-                  var i8arr = new Uint8Array(i32arr);
-                  var blob = new Blob([i8arr]);
-                  url = URL.createObjectURL(blob);
-                }
-
-                if (url) {
-                  imageTile.getImage().src = url;
-                }
-              } else {
-                // Tile is emtpy, so display a blank image. Note that ol.TileState.EMPTY is NOT WHAT WE WANT.
-                // Empty causes OpenLayers to keep displaying the parent tile for coverage. We want a blank
-                // tile.
-                imageTile.image_ = ol.ImageTile.getBlankImage();
-                imageTile.state = ol.TileState.LOADED;
-                imageTile.changed();
-              }
-            } else {
-              imageTile.handleImageError_();
-              goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
-            }
-          }
-        };
-
-        worker.addEventListener(goog.events.EventType.MESSAGE, onMessage);
-
-        worker.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
+        var msg = /** @type {GeoPackageWorkerMessage} */ ({
           id: providerId,
           type: plugin.geopackage.MsgType.GET_TILE,
           tableName: layerName,
-          tileCoord: tileCoord
-        }));
+          tileCoord: imageTile.getTileCoord()
+        });
+
+        var key = msg.id + '#' + msg.type + '#' + msg.tableName + '#' + msg.tileCoord.join(',');
+        plugin.geopackage.tiles_[key] = imageTile;
+        plugin.geopackage.getWorker().postMessage(msg);
       }
     });
+};
+
+
+/**
+ * @type {boolean}
+ * @private
+ */
+plugin.geopackage.tileListenerSet_ = false;
+
+
+/**
+ * @private
+ */
+plugin.geopackage.addTileListener_ = function() {
+  if (!plugin.geopackage.tileListenerSet_) {
+    plugin.geopackage.getWorker().addEventListener(goog.events.EventType.MESSAGE, plugin.geopackage.tileListener_);
+    plugin.geopackage.tileListenerSet_ = true;
+  }
+};
+
+
+/**
+ * @type {!Object<string, !ol.ImageTile>}
+ */
+plugin.geopackage.tiles_ = {};
+
+
+/**
+ * @param {Event|GeoPackageWorkerResponse} evt
+ * @private
+ * @suppress {accessControls}
+ */
+plugin.geopackage.tileListener_ = function(evt) {
+  var msg = /** @type {GeoPackageWorkerResponse} */ (evt instanceof Event ? evt.data : evt);
+
+  var key = msg.message.id + '#' + msg.message.type + '#' + msg.message.tableName + '#' +
+      msg.message.tileCoord.join(',');
+  var imageTile = plugin.geopackage.tiles_[key];
+
+  if (imageTile) {
+    delete plugin.geopackage.tiles_[key];
+
+    if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
+      if (msg.data) {
+        var url = null;
+
+        if (goog.isString(msg.data)) {
+          // Web Worker path
+          url = msg.data;
+        } else if (goog.isArray(msg.data)) {
+          // node process path
+          var i32arr = Int32Array.from(/** @type {!Array<!number>} */ (msg.data));
+          var i8arr = new Uint8Array(i32arr);
+          var blob = new Blob([i8arr]);
+          url = URL.createObjectURL(blob);
+        }
+
+        if (url) {
+          imageTile.getImage().src = url;
+        }
+      } else {
+        // Tile is emtpy, so display a blank image. Note that ol.TileState.EMPTY is NOT WHAT WE WANT.
+        // Empty causes OpenLayers to keep displaying the parent tile for coverage. We want a blank
+        // tile.
+        imageTile.image_ = ol.ImageTile.getBlankImage();
+        imageTile.state = ol.TileState.LOADED;
+        imageTile.changed();
+      }
+    } else {
+      imageTile.handleImageError_();
+      goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
+    }
+  }
 };
 
 
