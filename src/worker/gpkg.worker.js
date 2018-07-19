@@ -210,6 +210,31 @@ var fixResolutions = function(resolutions) {
 
 
 /**
+ * Cesium must have a full tile pyramid (ugh), and so we let it have one and then
+ * feed it blank tiles. Due to the full pyramid, we can't have empty sizes on the
+ * front of the tile array. Since these are just gonna result in blanks, just use
+ * the same as the first defined value.
+ * @param {Array<?(number|ol.Size)>} sizes
+ * @return {Array<!(number|ol.Size)>} sizes
+ */
+var fixSizes = function(sizes) {
+  var first;
+  for (var i = 0, n = sizes.length; i < n; i++) {
+    if (sizes[i]) {
+      first = sizes[i];
+      break;
+    }
+  }
+
+  while (i--) {
+    sizes[i] = first;
+  }
+
+  return sizes;
+};
+
+
+/**
  * @param {GeoPackageWorkerMessage} msg
  */
 var listDescriptors = function(msg) {
@@ -236,7 +261,7 @@ var listDescriptors = function(msg) {
           minZoom: Math.round(info.minZoom),
           maxZoom: Math.round(info.maxZoom),
           resolutions: fixResolutions(tileMatrices.map(tileMatrixToResolution)),
-          tileSizes: tileMatrices.map(tileMatrixToTileSize)
+          tileSizes: fixSizes(tileMatrices.map(tileMatrixToTileSize))
         };
 
         if (info.contents) {
