@@ -113,42 +113,44 @@ plugin.geopackage.tiles_ = {};
 plugin.geopackage.tileListener_ = function(evt) {
   var msg = /** @type {GeoPackageWorkerResponse} */ (evt instanceof Event ? evt.data : evt);
 
-  var key = msg.message.id + '#' + msg.message.type + '#' + msg.message.tableName + '#' +
-      msg.message.tileCoord.join(',');
-  var imageTile = plugin.geopackage.tiles_[key];
+  if (msg.message.type === plugin.geopackage.MsgType.GET_TILE) {
+    var key = msg.message.id + '#' + msg.message.type + '#' + msg.message.tableName + '#' +
+        msg.message.tileCoord.join(',');
+    var imageTile = plugin.geopackage.tiles_[key];
 
-  if (imageTile) {
-    delete plugin.geopackage.tiles_[key];
+    if (imageTile) {
+      delete plugin.geopackage.tiles_[key];
 
-    if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
-      if (msg.data) {
-        var url = null;
+      if (msg.type === plugin.geopackage.MsgType.SUCCESS) {
+        if (msg.data) {
+          var url = null;
 
-        if (goog.isString(msg.data)) {
-          // Web Worker path
-          url = msg.data;
-        } else if (goog.isArray(msg.data)) {
-          // node process path
-          var i32arr = Int32Array.from(/** @type {!Array<!number>} */ (msg.data));
-          var i8arr = new Uint8Array(i32arr);
-          var blob = new Blob([i8arr]);
-          url = URL.createObjectURL(blob);
-        }
+          if (goog.isString(msg.data)) {
+            // Web Worker path
+            url = msg.data;
+          } else if (goog.isArray(msg.data)) {
+            // node process path
+            var i32arr = Int32Array.from(/** @type {!Array<!number>} */ (msg.data));
+            var i8arr = new Uint8Array(i32arr);
+            var blob = new Blob([i8arr]);
+            url = URL.createObjectURL(blob);
+          }
 
-        if (url) {
-          imageTile.getImage().src = url;
+          if (url) {
+            imageTile.getImage().src = url;
+          }
+        } else {
+          // Tile is emtpy, so display a blank image. Note that ol.TileState.EMPTY is NOT WHAT WE WANT.
+          // Empty causes OpenLayers to keep displaying the parent tile for coverage. We want a blank
+          // tile.
+          imageTile.image_ = ol.ImageTile.getBlankImage();
+          imageTile.state = ol.TileState.LOADED;
+          imageTile.changed();
         }
       } else {
-        // Tile is emtpy, so display a blank image. Note that ol.TileState.EMPTY is NOT WHAT WE WANT.
-        // Empty causes OpenLayers to keep displaying the parent tile for coverage. We want a blank
-        // tile.
-        imageTile.image_ = ol.ImageTile.getBlankImage();
-        imageTile.state = ol.TileState.LOADED;
-        imageTile.changed();
+        imageTile.handleImageError_();
+        goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
       }
-    } else {
-      imageTile.handleImageError_();
-      goog.log.error(plugin.geopackage.LOGGER, 'Error querying tile from GeoPackage:' + msg.reason);
     }
   }
 };
