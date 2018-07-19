@@ -78,6 +78,11 @@ plugin.geopackage.getWorker = function() {
 
       child['addEventListener'] = child['addListener'];
       child['removeEventListener'] = child['removeListener'];
+
+      /**
+       * fake up postMessage() via send()
+       * @param {GeoPackageWorkerMessage} msg
+       */
       child['postMessage'] = function(msg) {
         child['send'](msg);
       };
