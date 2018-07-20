@@ -100,7 +100,7 @@
     "validate-commit-msg": "^2.8.2"
   },
   "dependencies": {
-    "@ngageoint/geopackage": "^1.0.24",
+    "@ngageoint/geopackage": "^1.1.3",
     "opensphere": "^1.0.0"
   }
 }
