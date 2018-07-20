@@ -33,7 +33,22 @@ goog.inherits(plugin.geopackage.GeoPackageImportUI, os.ui.im.AbstractImportUI);
 plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_config) {
   if (file) {
     this.file = file;
-    if (os.file.isLocal(file)) {
+    var url = file.getUrl();
+
+    // see if there are any other geopackage providers for the same file
+    var list = os.dataManager.getProviderRoot().getChildren().filter(function(provider) {
+      return (provider instanceof plugin.geopackage.GeoPackageProvider &&
+          /** @type {plugin.geopackage.GeoPackageProvider} */ (provider).getUrl() === url);
+    });
+
+    if (list.length) {
+      list.forEach(function(provider) {
+        provider.load();
+      });
+
+      os.alertManager.sendAlert(file.getFileName() + ' GeoPackage refreshed',
+          os.alert.AlertEventSeverity.INFO);
+    } else if (os.file.isLocal(file)) {
       os.file.FileStorage.getInstance().storeFile(file, true).addCallbacks(
           this.onFileReady, this.onFileError, this);
     } else {
@@ -48,7 +63,6 @@ plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_con
  */
 plugin.geopackage.GeoPackageImportUI.prototype.onFileReady = function() {
   var file = this.file;
-
   var conf = {
     'type': plugin.geopackage.ID,
     'label': file.getFileName(),
@@ -62,6 +76,7 @@ plugin.geopackage.GeoPackageImportUI.prototype.onFileReady = function() {
   provider.setEditable(true);
   provider.load();
 
+  os.settings.set(['userProviders', provider.getId()], conf);
   os.dataManager.addProvider(provider);
 
   os.alertManager.sendAlert(file.getFileName() + ' GeoPackage added!',
