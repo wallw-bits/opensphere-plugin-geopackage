@@ -71,7 +71,12 @@ plugin.geopackage.getWorker = function() {
   if (!plugin.geopackage.worker_) {
     var src = plugin.geopackage.ROOT + 'src/worker/gpkg.worker.js';
 
-    if (window.global && window.process) {
+    if (window.global && window['process']) {
+      // The node context (as opposed to the electron browser context), loads
+      // paths relative to process.cwd(). Therefore, we need to make our source
+      // path absolute.
+      src = window['require']('path').join(window['__dirname'], src);
+
       // spawn a child process and make it look like a worker
 
       // bracket notation because closure + browser AND node is gonna suck
