@@ -1,5 +1,7 @@
 goog.provide('plugin.geopackage');
 
+goog.require('goog.log');
+
 
 /**
  * @define {string}
@@ -88,12 +90,15 @@ plugin.geopackage.getWorker = function() {
       };
 
       plugin.geopackage.worker_ = /** @type {!Worker} */ (child);
+
+      goog.log.info(plugin.geopackage.LOGGER, 'GeoPackage worker configured via node child process');
     } else {
       plugin.geopackage.worker_ = new Worker(src);
       plugin.geopackage.worker_.postMessage(/** @type {GeoPackageWorkerMessage} */ ({
         type: plugin.geopackage.MsgType.OPEN_LIBRARY,
         url: (!plugin.geopackage.GPKG_PATH.startsWith('/') ? '../../' : '') + plugin.geopackage.GPKG_PATH
       }));
+      goog.log.info(plugin.geopackage.LOGGER, 'GeoPackage worker configured via web worker');
     }
   }
 
