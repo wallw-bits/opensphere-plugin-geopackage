@@ -175,6 +175,17 @@ plugin.geopackage.Exporter.prototype.onMessage = function(e) {
           this.output = Uint8Array.from(/** @type {!Array<!number>} */ (this.output)).buffer;
         }
 
+        // remove it
+        if (/ electron/i.test(navigator.userAgent)) {
+          window['require']('fs')['unlink']('tmp.gpkg', function(err) {
+            if (err) {
+              goog.log.error(plugin.geopackage.Exporter.LOGGER_, 'Could not delete tmp.gpkg!');
+            } else {
+              goog.log.info(plugin.geopackage.Exporter.LOGGER_, 'Removed tmp.gpkg');
+            }
+          });
+        }
+
         this.dispatchEvent(os.events.EventType.COMPLETE);
       } else {
         this.parseNext_();
@@ -296,28 +307,6 @@ plugin.geopackage.Exporter.RECORD_TIME_START_FIELD = 'TIME_START';
  * @const
  */
 plugin.geopackage.Exporter.RECORD_TIME_STOP_FIELD = 'TIME_STOP';
-
-
-/**
- * @param {*} err
- * @param {Uint8Array} data
- * @private
- */
-plugin.geopackage.Exporter.prototype.onExport_ = function(err, data) {
-  if (err) {
-    this.reportError_(String(err));
-    return;
-  }
-
-  this.output = data;
-
-  var gpkg = this.gpkg_;
-  setTimeout(function() {
-    gpkg.close();
-  }, 50);
-
-  this.dispatchEvent(os.events.EventType.COMPLETE);
-};
 
 
 /**
