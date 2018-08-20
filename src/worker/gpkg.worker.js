@@ -760,6 +760,18 @@ var window = this;
       process.send(msg);
     };
 
+    // CLEVER HACK ALERT!
+    // This script runs in either a Worker (web) or in a node child process (Electron).
+    // The child process has a node-only environment by default, rather than an Electron
+    // environment. However, electron-builder only packages the version built for the
+    // Electron environment.
+    //
+    // Therefore, trick node-pre-gyp into thinking we're in Electron.
+    // see associated env variable set in geopackage.js
+    if (process.env.ELECTRON_VERSION) {
+      process.versions.electron = process.env.ELECTRON_VERSION;
+    }
+
     geopackage = require('@ngageoint/geopackage');
   }
 })();

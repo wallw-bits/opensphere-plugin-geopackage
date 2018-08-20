@@ -81,7 +81,36 @@ plugin.geopackage.getWorker = function() {
 
       // bracket notation because closure + browser AND node is gonna suck
       var cp = window['require']('child_process');
-      var child = cp['fork'](src);
+
+      // CLEVER HACK ALERT!
+      // The child process has a node-only environment by default, rather than an Electron
+      // environment. However, electron-builder only packages the version built for the
+      // Electron environment.
+      //
+      // Therefore, pass the electron version to the script via an env variable so that
+      // it can know that we intend to load Electron bindings for native modules rather
+      // than node bindings.
+      //
+      // see associated hack in gpkg.worker.js
+      var versions = window['process']['versions'];
+      var options = {};
+
+      if ('electron' in versions && !window['process']['env']['ELECTRON_IS_DEV']) {
+        options['env'] = {
+          'ELECTRON_VERSION': versions['electron']
+        };
+      }
+
+      // to debug this guy:
+      //  - open chrome://inspect/#devices
+      //  - uncomment the debug option below
+      //  - open the application
+      //  - go to your chrome://inspect/#devices tab in Chrome
+      //  - select "Inspect" on the newly visible item
+
+      // DEBUG VERSION! Do not commit next line uncommented
+      // options['execArgv'] = ['--inspect-brk'];
+      var child = cp['fork'](src, [], options);
 
       child['addEventListener'] = child['addListener'];
       child['removeEventListener'] = child['removeListener'];
