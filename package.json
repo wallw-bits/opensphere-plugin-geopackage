@@ -14,6 +14,7 @@
     "type": "plugin",
     "pluggable": false,
     "index": "index.js",
+    "electron": ["@ngageoint/geopackage"],
     "gcc": {
       "entry_point": [
         "goog:plugin.geopackage.GeoPackagePlugin"
@@ -93,7 +94,7 @@
     "node-sass": "^4.7.2",
     "opensphere-build-closure-helper": "^1.0.0",
     "opensphere-build-docs": "^1.0.0",
-    "opensphere-build-resolver": "^2.1.0",
+    "opensphere-build-resolver": "^3.1.0",
     "replace": "^0.3.0",
     "rimraf": "^2.5.4",
     "sass-lint": "^1.9.1",
