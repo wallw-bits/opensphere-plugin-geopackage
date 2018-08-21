@@ -225,7 +225,7 @@ plugin.geopackage.GeoPackageProvider.prototype.logError = function(msg) {
  * @private
  */
 plugin.geopackage.GeoPackageProvider.prototype.addDescriptor_ = function(config) {
-  var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + config['title'];
+  var id = this.getId() + os.ui.data.BaseProvider.ID_DELIMITER + config['tableName'];
   config['id'] = id;
   config['delayUpdateActive'] = true;
   config['provider'] = this.getLabel();
