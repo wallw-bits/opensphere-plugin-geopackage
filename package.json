@@ -7,8 +7,7 @@
     "src": "src",
     "test": "test",
     "externs": "externs",
-    "scss": "scss",
-    "views": "views"
+    "scss": "scss"
   },
   "build": {
     "type": "plugin",
