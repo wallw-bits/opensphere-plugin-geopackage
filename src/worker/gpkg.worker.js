@@ -772,6 +772,10 @@ var window = this;
       process.versions.electron = process.env.ELECTRON_VERSION;
     }
 
+    if (process.env.ELECTRON_EXTRA_PATH) {
+      module.paths.unshift(process.env.ELECTRON_EXTRA_PATH);
+    }
+
     geopackage = require('@ngageoint/geopackage');
   }
 })();

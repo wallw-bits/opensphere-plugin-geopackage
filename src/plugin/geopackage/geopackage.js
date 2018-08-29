@@ -93,12 +93,14 @@ plugin.geopackage.getWorker = function() {
       //
       // see associated hack in gpkg.worker.js
       var versions = window['process']['versions'];
-      var options = {};
+      var options = {
+        'env': {
+          'ELECTRON_EXTRA_PATH': window['process']['env']['ELECTRON_EXTRA_PATH']
+        }
+      };
 
-      if ('electron' in versions && !window['process']['env']['ELECTRON_IS_DEV']) {
-        options['env'] = {
-          'ELECTRON_VERSION': versions['electron']
-        };
+      if ('electron' in versions) {
+        options['env']['ELECTRON_VERSION'] = versions['electron'];
       }
 
       // to debug this guy:
