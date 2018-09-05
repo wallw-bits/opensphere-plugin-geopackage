@@ -520,7 +520,19 @@ var exportGeoJSON = function(msg) {
   }
 
   try {
-    geopackage.addGeoJSONFeatureToGeoPackage(gpkg, msg.data, msg.tableName);
+    var geojson = msg.data;
+    var props = geojson.properties;
+
+    // time start and stop are ISO8601 strings, and the new API needs dates
+    if ('TIME_START' in props) {
+      props.TIME_START = new Date(Date.parse(props.TIME_START));
+    }
+
+    if ('TIME_STOP' in props) {
+      props.TIME_STOP = new Date(Date.parse(props.TIME_STOP));
+    }
+
+    geopackage.addGeoJSONFeatureToGeoPackage(gpkg, geojson, msg.tableName);
     success(msg);
   } catch (e) {
     handleError(e, msg);
