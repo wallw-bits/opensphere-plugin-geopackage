@@ -396,7 +396,14 @@ var getFeatures = function(msg) {
 
   try {
     var result = geopackage.iterateGeoJSONFeaturesFromTable(gpkg, msg.tableName);
-    result.results.forEach(success.bind(null, msg));
+    var itr = result.results;
+    var record = itr.next();
+    while (record) {
+      success(msg, record.value);
+      record = record.done ? null : itr.next();
+    }
+
+    success(msg, 0);
   } catch (e) {
     handleError(e, msg);
   }
@@ -413,19 +420,17 @@ var exportCreate = function(msg) {
   }
 
   var url = msg.url || 'tmp.gpkg';
-  var onCreate = function(err, gpkg) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
 
-    if (gpkg) {
-      gpkgById[msg.id] = gpkg;
-      success(msg);
-    }
-  };
-
-  geopackage.createGeoPackage(url, onCreate);
+  geopackage.create(url)
+      .then(function(gpkg) {
+        if (gpkg) {
+          gpkgById[msg.id] = gpkg;
+          success(msg);
+        }
+      })
+      .catch(function(err) {
+        handleError(err, msg);
+      });
 };
 
 
@@ -489,16 +494,12 @@ var exportCreateTable = function(msg) {
     }
   });
 
-  var onCreateTable = function(err, featureDao) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
-
+  try {
+    geopackage.createFeatureTable(gpkg, msg.tableName, geometryColumns, columns);
     success(msg);
-  };
-
-  geopackage.createFeatureTable(gpkg, msg.tableName, geometryColumns, columns, onCreateTable);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
@@ -518,13 +519,12 @@ var exportGeoJSON = function(msg) {
     return;
   }
 
-  geopackage.addGeoJSONFeatureToGeoPackage(gpkg, msg.data, msg.tableName, function(err) {
-    if (err) {
-      handleError(err, msg);
-    } else {
-      success(msg);
-    }
-  });
+  try {
+    geopackage.addGeoJSONFeatureToGeoPackage(gpkg, msg.data, msg.tableName);
+    success(msg);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
