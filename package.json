@@ -20,7 +20,7 @@
       ]
     },
     "moduleDefines": {
-      "plugin.geopackage.GPKG_PATH": "@ngageoint/geopackage/static/geopackage.min.js"
+      "plugin.geopackage.GPKG_PATH": "@ngageoint/geopackage/dist/geopackage.min.js"
     }
   },
   "scripts": {
