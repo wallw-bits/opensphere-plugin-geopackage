@@ -87,16 +87,6 @@ var openGpkg = function(msg) {
     return;
   }
 
-  var onGpkg = function(err, gpkg) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
-
-    gpkgById[msg.id] = gpkg;
-    success(msg);
-  };
-
   if (msg.data) {
     var data = msg.data;
     if (data instanceof ArrayBuffer) {
@@ -107,13 +97,25 @@ var openGpkg = function(msg) {
       handleError('data must be ArrayBuffer or Uint8Array', msg);
       return;
     }
-
-    geopackage.openGeoPackageByteArray(data, onGpkg);
   } else if (msg.url) {
     if (msg.url.startsWith('file://')) {
-      geopackage.GeoPackageManager.open(msg.url.substring(7), onGpkg);
+      data = msg.url.substring(7);
     }
   }
+
+  if (!data) {
+    handleError('data or url property must exist', msg);
+    return;
+  }
+
+  geopackage.open(data)
+      .then(function(gpkg) {
+        gpkgById[msg.id] = gpkg;
+        success(msg);
+      })
+      .catch(function(err) {
+        handleError(err, msg);
+      });
 };
 
 
@@ -258,139 +260,81 @@ var listDescriptors = function(msg) {
   var gpkg = getGpkg(msg);
 
   if (gpkg) {
-    var descriptors = [];
-    var tileTablesRemaining = -1;
-    var featureTablesRemaining = -1;
+    try {
+      var tileConfigs = gpkg.getTileTables().map(function(tableName) {
+        var tileDao = gpkg.getTileDao(tableName);
+        var info = gpkg.getInfoForTable(tileDao);
 
-    var onTileInfo = function(tileDao, err, info) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
+        if (info) {
+          var tileMatrices = tileDao.zoomLevelToTileMatrix;
 
-      if (info) {
-        var tileMatrices = tileDao.zoomLevelToTileMatrix;
+          var config = {
+            type: 'geopackage-tile',
+            title: info.tableName,
+            tableName: info.tableName,
+            minZoom: Math.round(info.minZoom),
+            maxZoom: Math.round(info.maxZoom),
+            resolutions: fixResolutions(tileMatrices.map(getTileMatrixToResolutionMapper(info))),
+            tileSizes: fixSizes(tileMatrices.map(tileMatrixToTileSize))
+          };
 
-        var config = {
-          type: 'geopackage-tile',
-          title: info.tableName,
-          tableName: info.tableName,
-          minZoom: Math.round(info.minZoom),
-          maxZoom: Math.round(info.maxZoom),
-          resolutions: fixResolutions(tileMatrices.map(getTileMatrixToResolutionMapper(info))),
-          tileSizes: fixSizes(tileMatrices.map(tileMatrixToTileSize))
-        };
+          if (info.contents) {
+            config.title = info.contents.identifier || config.title;
+            config.description = info.contents.description || config.description;
+          }
 
-        if (info.contents) {
-          config.title = info.contents.identifier || config.title;
-          config.description = info.contents.description || config.description;
+          if (info.srs) {
+            config.projection = info.srs.organization.toUpperCase() + ':' +
+                (info.srs.organization_coordsys_id || info.srs.id);
+          }
+
+          if (info.tileMatrixSet) {
+            config.extent = [
+              info.tileMatrixSet.minX,
+              info.tileMatrixSet.minY,
+              info.tileMatrixSet.maxX,
+              info.tileMatrixSet.maxY];
+
+            config.extentProjection = config.projection || 'EPSG:' + info.tileMatrixSet.srsId;
+          }
+
+          return config;
         }
-
-        if (info.srs) {
-          config.projection = info.srs.organization.toUpperCase() + ':' +
-              (info.srs.organization_coordsys_id || info.srs.id);
-        }
-
-        if (info.tileMatrixSet) {
-          config.extent = [
-            info.tileMatrixSet.minX,
-            info.tileMatrixSet.minY,
-            info.tileMatrixSet.maxX,
-            info.tileMatrixSet.maxY];
-
-          config.extentProjection = config.projection || 'EPSG:' + info.tileMatrixSet.srsId;
-        }
-
-        descriptors.push(config);
-        tileTablesRemaining--;
-
-        if (!tileTablesRemaining && !featureTablesRemaining) {
-          success(msg, descriptors);
-        }
-      }
-    };
-
-    var onTileDao = function(err, tileDao) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
-
-      gpkg.getInfoForTable(tileDao, onTileInfo.bind(null, tileDao));
-    };
-
-    var onTileTables = function(err, tileTables) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
-
-      tileTablesRemaining = tileTables.length;
-      tileTables.forEach(function(tileTable) {
-        gpkg.getTileDaoWithTableName(tileTable, onTileDao);
       });
-    };
 
-    gpkg.getTileTables(onTileTables);
+      var featureConfigs = gpkg.getFeatureTables().map(function(tableName) {
+        var featureDao = gpkg.getFeatureDao(tableName);
+        var info = gpkg.getInfoForTable(featureDao);
 
-
-    var onFeatureInfo = function(err, info) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
-
-      if (info) {
-        var cols = info.columns.map(function(col) {
-          return /** @type {os.ogc.FeatureTypeColumn} */ ({
-            type: col.dataType.toLowerCase(),
-            name: col.name
+        if (info) {
+          var cols = info.columns.map(function(col) {
+            return /** @type {os.ogc.FeatureTypeColumn} */ ({
+              type: col.dataType.toLowerCase(),
+              name: col.name
+            });
           });
-        });
 
-        var config = {
-          type: 'geopackage-vector',
-          title: info.tableName,
-          tableName: info.tableName,
-          dbColumns: cols
-        };
+          var config = {
+            type: 'geopackage-vector',
+            title: info.tableName,
+            tableName: info.tableName,
+            dbColumns: cols
+          };
 
-        if (info.contents) {
-          config.title = info.contents.identifier || config.title;
-          config.description = info.contents.description || config.description;
+          if (info.contents) {
+            config.title = info.contents.identifier || config.title;
+            config.description = info.contents.description || config.description;
+          }
+
+          return config;
         }
-
-        descriptors.push(config);
-        featureTablesRemaining--;
-
-        if (!tileTablesRemaining && !featureTablesRemaining) {
-          success(msg, descriptors);
-        }
-      }
-    };
-
-    var onFeatureDao = function(err, featureDao) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
-
-      gpkg.getInfoForTable(featureDao, onFeatureInfo);
-    };
-
-    var onFeatureTables = function(err, featureTables) {
-      if (err) {
-        handleError(err, msg);
-        return;
-      }
-
-      featureTablesRemaining = featureTables.length;
-      featureTables.forEach(function(featureTable) {
-        gpkg.getFeatureDaoWithTableName(featureTable, onFeatureDao);
       });
-    };
 
-    gpkg.getFeatureTables(onFeatureTables);
+      success(msg, tileConfigs.concat(featureConfigs));
+    } catch (e) {
+      handleError(e, msg);
+      return;
+    }
   }
 };
 
@@ -416,11 +360,9 @@ var getTile = function(msg) {
     return;
   }
 
-  var onTile = function(err, tile) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
+  try {
+    var tileDao = gpkg.getTileDao(msg.tableName);
+    var tile = tileDao.queryForTile(msg.tileCoord[1], -msg.tileCoord[2] - 1, msg.tileCoord[0]);
 
     if (!tile) {
       success(msg);
@@ -435,18 +377,9 @@ var getTile = function(msg) {
       var blob = new Blob([array]);
       success(msg, URL.createObjectURL(blob));
     }
-  };
-
-  var onTileDao = function(err, tileDao) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
-
-    tileDao.queryForTile(msg.tileCoord[1], -msg.tileCoord[2] - 1, msg.tileCoord[0], onTile);
-  };
-
-  gpkg.getTileDaoWithTableName(msg.tableName, onTileDao);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
@@ -461,29 +394,19 @@ var getFeatures = function(msg) {
     return;
   }
 
-  var onFeature = function(err, geoJson, rowDone) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
-
-    if (geoJson) {
-      success(msg, geoJson);
-    }
-
-    rowDone();
-  };
-
-  var onDone = function(err) {
-    if (err) {
-      handleError(err, msg);
-      return;
+  try {
+    var result = geopackage.iterateGeoJSONFeaturesFromTable(gpkg, msg.tableName);
+    var itr = result.results;
+    var record = itr.next();
+    while (record) {
+      success(msg, record.value);
+      record = record.done ? null : itr.next();
     }
 
     success(msg, 0);
-  };
-
-  geopackage.iterateGeoJSONFeaturesFromTable(gpkg, msg.tableName, onFeature, onDone);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
@@ -497,19 +420,17 @@ var exportCreate = function(msg) {
   }
 
   var url = msg.url || 'tmp.gpkg';
-  var onCreate = function(err, gpkg) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
 
-    if (gpkg) {
-      gpkgById[msg.id] = gpkg;
-      success(msg);
-    }
-  };
-
-  geopackage.createGeoPackage(url, onCreate);
+  geopackage.create(url)
+      .then(function(gpkg) {
+        if (gpkg) {
+          gpkgById[msg.id] = gpkg;
+          success(msg);
+        }
+      })
+      .catch(function(err) {
+        handleError(err, msg);
+      });
 };
 
 
@@ -573,16 +494,12 @@ var exportCreateTable = function(msg) {
     }
   });
 
-  var onCreateTable = function(err, featureDao) {
-    if (err) {
-      handleError(err, msg);
-      return;
-    }
-
+  try {
+    geopackage.createFeatureTable(gpkg, msg.tableName, geometryColumns, columns);
     success(msg);
-  };
-
-  geopackage.createFeatureTable(gpkg, msg.tableName, geometryColumns, columns, onCreateTable);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
@@ -602,13 +519,24 @@ var exportGeoJSON = function(msg) {
     return;
   }
 
-  geopackage.addGeoJSONFeatureToGeoPackage(gpkg, msg.data, msg.tableName, function(err) {
-    if (err) {
-      handleError(err, msg);
-    } else {
-      success(msg);
+  try {
+    var geojson = msg.data;
+    var props = geojson.properties;
+
+    // time start and stop are ISO8601 strings, and the new API needs dates
+    if ('TIME_START' in props) {
+      props.TIME_START = new Date(Date.parse(props.TIME_START));
     }
-  });
+
+    if ('TIME_STOP' in props) {
+      props.TIME_STOP = new Date(Date.parse(props.TIME_STOP));
+    }
+
+    geopackage.addGeoJSONFeatureToGeoPackage(gpkg, geojson, msg.tableName);
+    success(msg);
+  } catch (e) {
+    handleError(e, msg);
+  }
 };
 
 
@@ -712,7 +640,7 @@ var openLibrary = function(msg) {
   if (!isNode) {
     // this allows the main application to detect where this is loaded
     importScripts(msg.url);
-    geopackage = window.geopackage;
+    geopackage = self.geopackage;
   }
 };
 
@@ -742,9 +670,6 @@ var onMessage = function(evt) {
   }
 };
 
-
-// the browser library needs this to exist
-var window = this;
 
 (function() {
   if (typeof self === 'object') {
