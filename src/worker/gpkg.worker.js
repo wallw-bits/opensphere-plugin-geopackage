@@ -262,7 +262,7 @@ var listDescriptors = function(msg) {
   if (gpkg) {
     try {
       var tileConfigs = gpkg.getTileTables().map(function(tableName) {
-        var tileDao = gpkg.getTileDaoWithTableName(tableName);
+        var tileDao = gpkg.getTileDao(tableName);
         var info = gpkg.getInfoForTable(tileDao);
 
         if (info) {
@@ -303,7 +303,7 @@ var listDescriptors = function(msg) {
       });
 
       var featureConfigs = gpkg.getFeatureTables().map(function(tableName) {
-        var featureDao = gpkg.getFeatureDaoWithTableName(tableName);
+        var featureDao = gpkg.getFeatureDao(tableName);
         var info = gpkg.getInfoForTable(featureDao);
 
         if (info) {
@@ -361,7 +361,7 @@ var getTile = function(msg) {
   }
 
   try {
-    var tileDao = gpkg.getTileDaoWithTableName(msg.tableName);
+    var tileDao = gpkg.getTileDao(msg.tableName);
     var tile = tileDao.queryForTile(msg.tileCoord[1], -msg.tileCoord[2] - 1, msg.tileCoord[0]);
 
     if (!tile) {
