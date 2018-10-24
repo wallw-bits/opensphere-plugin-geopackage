@@ -108,6 +108,22 @@ plugin.geopackage.RequestHandler.prototype.getResponseHeaders = function() {
 /**
  * @inheritDoc
  */
+plugin.geopackage.RequestHandler.prototype.getTimeout = function() {
+  return 0;
+};
+
+
+/**
+ * @inheritDoc
+ */
+plugin.geopackage.RequestHandler.prototype.setTimeout = function(value) {
+  // not supported
+};
+
+
+/**
+ * @inheritDoc
+ */
 plugin.geopackage.RequestHandler.prototype.getErrors = function() {
   return this.errors.length ? this.errors : null;
 };
