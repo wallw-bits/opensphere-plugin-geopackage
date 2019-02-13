@@ -12,7 +12,7 @@
  *  tileCoord: (Array<number>|undefined),
  *  tableName: (string|undefined),
  *  url: (string|undefined),
- *  columns: ({field: string, type: string}|undefined)
+ *  columns: ({field: string, type: string}|undefined),
  *  command: (string|undefined)
  * }}
  */
