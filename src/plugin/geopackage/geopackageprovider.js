@@ -73,10 +73,9 @@ plugin.geopackage.GeoPackageProvider.prototype.load = function(opt_ping) {
   plugin.geopackage.GeoPackageProvider.base(this, 'load', opt_ping);
   this.setLoading(true);
 
-  var isNode = navigator.userAgent.toLowerCase().indexOf(' electron') > -1;
   var url = this.getUrl();
 
-  if (isNode && os.file.isFileSystem(url)) {
+  if (plugin.geopackage.isElectron() && os.file.isFileSystem(url)) {
     var worker = plugin.geopackage.getWorker();
 
     // close any previously-opened versions
