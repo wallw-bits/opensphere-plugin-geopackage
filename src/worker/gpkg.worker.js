@@ -108,7 +108,7 @@ var openGpkg = function(msg) {
     }
   } else if (msg.url) {
     if (msg.url.startsWith('file://')) {
-      data = msg.url.substring(isWin() ? 8 : 7);
+      data = decodeURIComponent(msg.url.substring(isWin() ? 8 : 7));
     }
   }
 
