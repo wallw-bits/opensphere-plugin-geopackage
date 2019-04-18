@@ -21,12 +21,12 @@ goog.inherits(plugin.geopackage.Tile, os.tile.ColorableTile);
 /**
  * @inheritDoc
  */
-plugin.geopackage.Tile.prototype.dispose = function() {
+plugin.geopackage.Tile.prototype.disposeInternal = function() {
   var src = this.getImage().src;
   if (src) {
     URL.revokeObjectURL(src);
   }
 
-  plugin.geopackage.Tile.base(this, 'dispose');
+  plugin.geopackage.Tile.base(this, 'disposeInternal');
 };
 
