@@ -176,8 +176,9 @@ plugin.geopackage.Exporter.prototype.onMessage = function(e) {
         }
 
         // remove it
-        if (/ electron/i.test(navigator.userAgent)) {
-          window['require']('fs')['unlink']('tmp.gpkg', function(err) {
+        var electron = plugin.geopackage.getElectron();
+        if (electron) {
+          electron.unlinkFile('tmp.gpkg', function(err) {
             if (err) {
               goog.log.error(plugin.geopackage.Exporter.LOGGER_, 'Could not delete tmp.gpkg!');
             } else {

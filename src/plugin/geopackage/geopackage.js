@@ -65,22 +65,38 @@ plugin.geopackage.worker_ = null;
 
 
 /**
+ * Get the Electron preload exports.
+ * @return {Object|undefined}
+ */
+plugin.geopackage.getElectron = function() {
+  return window.ElectronGpkg || undefined;
+};
+
+
+/**
+ * If the app is running within Electron.
+ * @return {boolean}
+ */
+plugin.geopackage.isElectron = function() {
+  return !!plugin.geopackage.getElectron();
+};
+
+
+/**
  * @return {!Worker} The GeoPackage worker
  */
 plugin.geopackage.getWorker = function() {
   if (!plugin.geopackage.worker_) {
     var src = plugin.geopackage.ROOT + 'src/worker/gpkg.worker.js';
 
-    if (window.global && window['process']) {
+    var electron = plugin.geopackage.getElectron();
+    if (electron) {
       // The node context (as opposed to the electron browser context), loads
       // paths relative to process.cwd(). Therefore, we need to make our source
       // path absolute.
-      src = window['require']('path').join(window['__dirname'], src);
+      src = electron.resolveOpenspherePath(src);
 
       // spawn a child process and make it look like a worker
-
-      // bracket notation because closure + browser AND node is gonna suck
-      var cp = window['require']('child_process');
 
       // CLEVER HACK ALERT!
       // The child process has a node-only environment by default, rather than an Electron
@@ -92,16 +108,7 @@ plugin.geopackage.getWorker = function() {
       // than node bindings.
       //
       // see associated hack in gpkg.worker.js
-      var versions = window['process']['versions'];
-      var options = {
-        'env': {
-          'ELECTRON_EXTRA_PATH': window['process']['env']['ELECTRON_EXTRA_PATH']
-        }
-      };
-
-      if ('electron' in versions) {
-        options['env']['ELECTRON_VERSION'] = versions['electron'];
-      }
+      var options = electron.getElectronEnvOptions();
 
       // to debug this guy:
       //  - open chrome://inspect/#devices
@@ -112,7 +119,7 @@ plugin.geopackage.getWorker = function() {
 
       // DEBUG VERSION! Do not commit next line uncommented
       // options['execArgv'] = ['--inspect-brk'];
-      var child = cp['fork'](src, [], options);
+      var child = electron.forkProcess(src, [], options);
 
       child['addEventListener'] = child['addListener'];
       child['removeEventListener'] = child['removeListener'];
