@@ -103,6 +103,6 @@
   },
   "dependencies": {
     "@ngageoint/geopackage": "^2.0.0",
-    "opensphere": "^1.0.0"
+    "opensphere": "0.0.0-development"
   }
 }
