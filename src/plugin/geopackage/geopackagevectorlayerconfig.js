@@ -40,7 +40,7 @@ plugin.geopackage.VectorLayerConfig.prototype.getLayer = function(source, option
  * @param {os.ogc.IFeatureType} featureType
  */
 plugin.geopackage.VectorLayerConfig.prototype.addMappings = function(layer, options, featureType) {
-  var animate = goog.isDefAndNotNull(options['animate']) ? options['animate'] : false;
+  var animate = options['animate'] != null ? options['animate'] : false;
   var source = /** @type {os.source.Request} */ (layer.getSource());
   var importer = /** @type {os.im.Importer} */ (source.getImporter());
 
