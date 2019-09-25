@@ -1,7 +1,8 @@
 goog.require('plugin.geopackage.GeoPackageProvider');
 
+
 describe('plugin.geopackage.GeoPackageProvider', function() {
-  plugin.geopackage.ROOT = 'base/';
+  plugin['geopackage']['ROOT'] = 'base/';
   var baseUrl = '/base/test/resources/geopackage/';
 
   it('should configure properly', function() {
