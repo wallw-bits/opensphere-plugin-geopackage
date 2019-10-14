@@ -428,7 +428,7 @@ var exportCreate = function(msg) {
     return;
   }
 
-  var url = msg.url || 'tmp.gpkg';
+  var url = msg.url || (isNode ? 'tmp.gpkg' : undefined);
 
   geopackage.create(url)
       .then(function(gpkg) {
