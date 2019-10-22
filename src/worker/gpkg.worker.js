@@ -474,7 +474,8 @@ var exportCreateTable = function(msg) {
   columns.push(FeatureColumn.createGeometryColumn(1, 'geometry', 'GEOMETRY', false, null));
 
   msg.columns.forEach(function(col) {
-    if (col.field.toLowerCase() === 'id' || col.field.toLowerCase() === 'geometry') {
+    if (col.field.toLowerCase() === 'id' || col.field.toLowerCase() === 'geometry' ||
+        col.field === 'TIME_START' || col.field === 'TIME_STOP') {
       return;
     }
 
@@ -489,7 +490,7 @@ var exportCreateTable = function(msg) {
       type = DataType.GPKG_DT_INTEGER;
       defaultValue = null;
     } else if (colType === 'datetime') {
-      type = DataType.GPKG_DT_DATETIME;
+      type = DataType.GPKG_DT_TEXT;
       defaultValue = null;
     }
 
