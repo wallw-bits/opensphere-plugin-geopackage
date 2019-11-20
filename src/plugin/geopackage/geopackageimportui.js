@@ -37,8 +37,7 @@ plugin.geopackage.GeoPackageImportUI.prototype.launchUI = function(file, opt_con
 
     // see if there are any other geopackage providers for the same file
     var list = os.dataManager.getProviderRoot().getChildren().filter(function(provider) {
-      return (provider instanceof plugin.geopackage.GeoPackageProvider &&
-          /** @type {plugin.geopackage.GeoPackageProvider} */ (provider).getUrl() === url);
+      return provider instanceof plugin.geopackage.GeoPackageProvider && provider.getUrl() === url;
     });
 
     if (list.length) {

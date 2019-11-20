@@ -462,12 +462,15 @@ var exportCreateTable = function(msg) {
   var FeatureColumn = geopackage.FeatureColumn;
   var DataType = geopackage.DataTypes.GPKGDataType;
 
+  // disable camelcase checks for external library that does not conform to the rule
+  /* eslint-disable google-camelcase/google-camelcase */
   var geometryColumns = new geopackage.GeometryColumns();
   geometryColumns.table_name = msg.tableName;
   geometryColumns.column_name = 'geometry';
   geometryColumns.geometry_type_name = 'GEOMETRY';
   geometryColumns.z = 2;
   geometryColumns.m = 0;
+  /* eslint-enable google-camelcase/google-camelcase */
 
   var columns = [];
   columns.push(FeatureColumn.createPrimaryKeyColumnWithIndexAndName(0, 'id'));
