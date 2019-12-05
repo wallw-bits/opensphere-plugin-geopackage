@@ -14,8 +14,12 @@
     "pluggable": false,
     "index": "index.js",
     "electron": {
-      "packages": ["@ngageoint/geopackage"],
-      "preload": ["./src/electron/preload.js"]
+      "packages": [
+        "@ngageoint/geopackage"
+      ],
+      "preload": [
+        "./src/electron/preload.js"
+      ]
     },
     "gcc": {
       "entry_point": [
@@ -86,6 +90,7 @@
     "karma-chrome-launcher": "^2.0.0",
     "karma-coverage": "^1.1.1",
     "karma-firefox-launcher": "^1.1.0",
+    "karma-googmodule-preprocessor": "^1.0.1",
     "karma-jasmine": "^0.1.0",
     "karma-junit-reporter": "^1.1.0",
     "mkdirp": "^0.5.1",
