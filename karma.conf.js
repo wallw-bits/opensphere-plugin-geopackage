@@ -1,20 +1,32 @@
-// Karma configuration
+/* eslint-env es6 */
+/* eslint-disable max-len */
+
 const path = require('path');
-const helper = require('opensphere-build-closure-helper');
-var resolver = require('opensphere-build-resolver/utils');
-var fs = require('fs');
+const resolved = require(path.join(__dirname, '.build/resolved.json'));
+const resolver = require('opensphere-build-resolver/utils');
+const fs = require('fs');
 
+/**
+ * Karma configuration.
+ *
+ * Development Note:
+ * This configuration uses a script loader to avoid pending request limits in Chrome. To limit which tests run during
+ * development, use `ddescribe` and `iit` to instruct Jasmine to only run those specs.
+ *
+ * @param {Object} config The config.
+ */
 module.exports = function(config) {
-  var closureFiles = helper.readManifest(path.resolve('.build', 'gcc-test-manifest'))
-    .filter(function(item) {
-      return item.indexOf('/src/core/debugutil.js') === -1 &&
-        item.indexOf('test/') !== 0;
-    });
-
   // get gpkg library location and add a script karma can load to set it in-browser
-  var gpkg = resolver.resolveModulePath('@ngageoint/geopackage/dist/geopackage.min.js', __dirname);
-  fs.writeFileSync(path.join(__dirname, '.build', 'gpkg-define.js'),
-    'plugin.geopackage.GPKG_PATH = "/absolute' + gpkg + '"');
+  const gpkg = resolver.resolveModulePath('@ngageoint/geopackage/dist/geopackage.min.js', __dirname);
+  const gpkgDefinePath = path.join(__dirname, '.build', 'gpkg-define.js');
+  const gpkgManifestPath = path.join(__dirname, '.build', 'gcc-test-manifest-gpkg');
+  fs.writeFileSync(gpkgDefinePath, 'plugin.geopackage.GPKG_PATH = "/absolute' + gpkg + '"');
+
+  // add the file to the test manifest
+  const testManifest = fs.readFileSync('.build/gcc-test-manifest', 'utf8').trim();
+  if (testManifest.indexOf(gpkgDefinePath) === -1) {
+    fs.writeFileSync(gpkgManifestPath, `${testManifest}\n${gpkgDefinePath}`);
+  }
 
   config.set({
     // base path, that will be used to resolve files and exclude
@@ -39,21 +51,30 @@ module.exports = function(config) {
       {pattern: resolver.resolveModulePath('angular-mocks/angular-mocks.js', __dirname), watched: false, included: true, served: true},
       {pattern: resolver.resolveModulePath('d3/d3.min.js', __dirname), watched: false, included: true, served: true},
       {pattern: resolver.resolveModulePath('jsts/dist/jsts.min.js', __dirname), watched: false, included: true, served: true},
-      {pattern: resolver.resolveModulePath('moment/min/moment.min.js', __dirname), watched: false, included: true, served: true},
-      {pattern: resolver.resolveModulePath('cesium/Build/Cesium/Cesium.js', __dirname), watched: false, included: true, served: true},
       {pattern: resolver.resolveModulePath('@ngageoint/geopackage/dist/geopackage.min.js', __dirname), watched: false, included: false, served: true},
-    ].concat(closureFiles).concat([
-      '.build/gpkg-define.js',
-
-      // tests and mocks
-      'test/**/*.mock.js',
-      'test/**/*.test.js',
 
       // test resources
-      {pattern: 'test/**/*.json', included: false},
-      {pattern: 'test/**/*.xml', included: false},
-      {pattern: 'test/resources/**/*', included: false}
-    ]),
+      {pattern: 'test/resources/**/*', included: false},
+
+      // source files for the script loader
+      {pattern: 'src/**/*.js', watched: false, included: false, served: true},
+      {pattern: 'test/**/*.js', watched: false, included: false, served: true},
+      {pattern: path.join(resolved['opensphere'], '**/*.js'), watched: false, included: false, served: true},
+      {pattern: path.join(resolved['bits-internal'], '**/*.js'), watched: false, included: false, served: true},
+      {pattern: resolver.resolveModulePath('google-closure-library/**/*.js', __dirname), watched: false, included: false, served: true},
+      {pattern: resolver.resolveModulePath('openlayers/**/*.js', __dirname), watched: false, included: false, served: true},
+      {pattern: resolver.resolveModulePath('ol-cesium/**/*.js', __dirname), watched: false, included: false, served: true},
+
+      // serve the test manifest and gpkg define, and include the script loader
+      {pattern: '.build/gpkg-define.js', included: false},
+      {pattern: gpkgManifestPath, watched: false, included: false, served: true},
+      resolver.resolveModulePath('opensphere-build-index/karma-test-loader.js', __dirname)
+    ],
+
+    proxies: {
+      // the test loader uses this path to resolve the manifest
+      '/karma-test-scripts': gpkgManifestPath
+    },
 
     // list of files to exclude
     exclude: [
@@ -61,13 +82,20 @@ module.exports = function(config) {
       '**/*.swp'
     ],
 
-
     // test results reporter to use
     // possible values: 'dots', 'progress', 'junit', 'growl', 'coverage'
     reporters: ['dots', 'junit', 'coverage'],
 
+    //
+    // Preprocessors:
+    //  - googmodule wraps goog.module files so they are loaded correctly by the browser
+    //  - coverage provides test coverage reports
+    //
     preprocessors: {
-      'src/**/*.js': ['coverage']
+      'src/**/*.js': ['googmodule', 'coverage'],
+      'test/**/*.mock.js': ['googmodule'],
+      // support goog.module in all other js files in the workspace
+      '../**/*.js': ['googmodule']
     },
 
     junitReporter: {
@@ -79,23 +107,23 @@ module.exports = function(config) {
     coverageReporter: {
       // Enforce test coverage in the build
       // Change this to your liking
-      check: {
-        global: {
-          statements: 90,
-          branches: 80,
-          functions: 90,
-          lines: 90,
-          excludes: []
-        },
-        each: {
-          statements: 80,
-          branches: 70,
-          functions: 50,
-          lines: 80,
-          excludes: [],
-          overrides: {}
-        }
-      },
+      // check: {
+      //   global: {
+      //     statements: 90,
+      //     branches: 80,
+      //     functions: 90,
+      //     lines: 90,
+      //     excludes: []
+      //   },
+      //   each: {
+      //     statements: 80,
+      //     branches: 70,
+      //     functions: 50,
+      //     lines: 80,
+      //     excludes: [],
+      //     overrides: {}
+      //   }
+      // },
       reporters: [{
         type: 'html',
         dir: '.build/test/coverage/html'
@@ -141,7 +169,7 @@ module.exports = function(config) {
     // if true, it capture browsers, run tests and exit
     singleRun: false,
 
-    //Write console output to terminal window
+    // Write console output to terminal window
     client: {
       captureConsole: true
     }
