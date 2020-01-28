@@ -5,6 +5,7 @@ const path = require('path');
 const resolved = require(path.join(__dirname, '.build/resolved.json'));
 const resolver = require('opensphere-build-resolver/utils');
 const fs = require('fs');
+const closureLibJsPattern = resolver.resolveModulePath('google-closure-library/**/*.js', __dirname);
 
 /**
  * Karma configuration.
@@ -60,8 +61,7 @@ module.exports = function(config) {
       {pattern: 'src/**/*.js', watched: false, included: false, served: true},
       {pattern: 'test/**/*.js', watched: false, included: false, served: true},
       {pattern: path.join(resolved['opensphere'], '**/*.js'), watched: false, included: false, served: true},
-      {pattern: path.join(resolved['bits-internal'], '**/*.js'), watched: false, included: false, served: true},
-      {pattern: resolver.resolveModulePath('google-closure-library/**/*.js', __dirname), watched: false, included: false, served: true},
+      {pattern: closureLibJsPattern, watched: false, included: false, served: true},
       {pattern: resolver.resolveModulePath('openlayers/**/*.js', __dirname), watched: false, included: false, served: true},
       {pattern: resolver.resolveModulePath('ol-cesium/**/*.js', __dirname), watched: false, included: false, served: true},
 
@@ -95,7 +95,9 @@ module.exports = function(config) {
       'src/**/*.js': ['googmodule', 'coverage'],
       'test/**/*.mock.js': ['googmodule'],
       // support goog.module in all other js files in the workspace
-      '../**/*.js': ['googmodule']
+      '../**/*.js': ['googmodule'],
+      // support goog.module in Closure library
+      [`${closureLibJsPattern}`]: ['googmodule']
     },
 
     junitReporter: {
