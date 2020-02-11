@@ -125,7 +125,7 @@ plugin.geopackage.tileListener_ = function(evt) {
         if (msg.data) {
           var url = null;
 
-          if (goog.isString(msg.data)) {
+          if (typeof msg.data === 'string') {
             // Web Worker path
             url = msg.data;
           } else if (goog.isArray(msg.data)) {

@@ -6,12 +6,12 @@ goog.require('goog.log');
 /**
  * @define {string}
  */
-goog.define('plugin.geopackage.ROOT', '../opensphere-plugin-geopackage/');
+plugin.geopackage.ROOT = goog.define('plugin.geopackage.ROOT', '../opensphere-plugin-geopackage/');
 
 /**
  * @define {string}
  */
-goog.define('plugin.geopackage.GPKG_PATH', 'vendor/geopackage/geopackage.min.js');
+plugin.geopackage.GPKG_PATH = goog.define('plugin.geopackage.GPKG_PATH', 'vendor/geopackage/geopackage.min.js');
 
 /**
  * @type {string}

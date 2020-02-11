@@ -318,7 +318,7 @@ plugin.geopackage.Exporter.RECORD_TIME_STOP_FIELD = 'TIME_STOP';
 plugin.geopackage.Exporter.prototype.getSource_ = function(feature) {
   if (feature) {
     var sourceId = feature.get(os.data.RecordField.SOURCE_ID);
-    if (goog.isString(sourceId)) {
+    if (typeof sourceId === 'string') {
       return /** @type {os.source.Vector} */ (os.osDataManager.getSource(sourceId));
     }
   }
