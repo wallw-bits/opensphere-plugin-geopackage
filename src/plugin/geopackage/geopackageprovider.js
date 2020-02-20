@@ -62,7 +62,7 @@ plugin.geopackage.GeoPackageProvider.prototype.disposeInternal = function() {
  */
 plugin.geopackage.GeoPackageProvider.prototype.configure = function(config) {
   plugin.geopackage.GeoPackageProvider.base(this, 'configure', config);
-  this.setUrl(/** @type{string} */ (config['url']));
+  this.setUrl(/** @type {string} */ (config['url']));
 };
 
 
