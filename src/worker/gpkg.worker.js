@@ -706,7 +706,7 @@ var onMessage = function(evt) {
     //
     // Therefore, trick node-pre-gyp into thinking we're in Electron.
     // see associated env variable set in geopackage.js
-    if (process.env.ELECTRON_VERSION) {
+    if (process.versions.electron == null && process.env.ELECTRON_VERSION) {
       process.versions.electron = process.env.ELECTRON_VERSION;
     }
 
