@@ -1,10 +1,8 @@
-/* eslint-disable */
-
-const child_process = require('child_process');
+const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const {contextBridge} = require('electron')
+const {contextBridge} = require('electron');
 
 /**
  * Fork a child process.
@@ -14,7 +12,7 @@ const {contextBridge} = require('electron')
  * @return {!Worker} The wrapped process, emulating a web worker.
  */
 const forkProcess = (modulePath, args, options) => {
-  const child = child_process.fork(modulePath, args, options);
+  const child = childProcess.fork(modulePath, args, options);
 
   //
   // Electron's contextIsolation limits what can be passed back to the main process, as all return values are proxied
@@ -26,10 +24,10 @@ const forkProcess = (modulePath, args, options) => {
   //
   return /** @type {!Worker} */ ({
     addEventListener: (type, callback) => {
-      child.addListener(type, callback)
+      child.addListener(type, callback);
     },
     removeEventListener: (type, callback) => {
-      child.removeListener(type, callback)
+      child.removeListener(type, callback);
     },
     postMessage: (msg) => {
       child.send(msg);
