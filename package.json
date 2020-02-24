@@ -80,7 +80,7 @@
     "conventional-recommended-bump": "^0.3.0",
     "cz-conventional-changelog": "^1.2.0",
     "eslint": "^6.0.0",
-    "eslint-config-opensphere": "^3.3.0",
+    "eslint-config-opensphere": "^4.0.0",
     "husky": "^0.13.3",
     "jasmine-core": "^2.5.2",
     "js-dossier": "^0.10.0",
