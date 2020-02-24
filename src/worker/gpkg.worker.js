@@ -37,10 +37,14 @@ var isWin = function() {
 
 
 /**
- * @param {string} reason
+ * @param {Error|string} reason
  * @param {GeoPackageWorkerMessage} originalMsg
  */
 var handleError = function(reason, originalMsg) {
+  if (reason instanceof Error) {
+    reason = reason.toString();
+  }
+
   // don't send anything potentially large back in the error message
   delete originalMsg.data;
 
