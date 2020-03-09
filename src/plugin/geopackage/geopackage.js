@@ -119,20 +119,8 @@ plugin.geopackage.getWorker = function() {
 
       // DEBUG VERSION! Do not commit next line uncommented
       // options['execArgv'] = ['--inspect-brk'];
-      var child = electron.forkProcess(src, [], options);
 
-      child['addEventListener'] = child['addListener'];
-      child['removeEventListener'] = child['removeListener'];
-
-      /**
-       * fake up postMessage() via send()
-       * @param {GeoPackageWorkerMessage} msg
-       */
-      child['postMessage'] = function(msg) {
-        child['send'](msg);
-      };
-
-      plugin.geopackage.worker_ = /** @type {!Worker} */ (child);
+      plugin.geopackage.worker_ = /** @type {!Worker} */ (electron.forkProcess(src, [], options));
 
       goog.log.info(plugin.geopackage.LOGGER, 'GeoPackage worker configured via node child process');
     } else {
