@@ -1,27 +1,46 @@
-/* eslint-disable */
-
-const child_process = require('child_process');
+const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const process = require('process');
+
+const {contextBridge} = require('electron');
 
 /**
  * Fork a child process.
  * @param {string} modulePath The module to run in the child.
  * @param {Array|undefined} args List of string arguments.
  * @param {Object|undefined} options The process options.
- * @return {!Object} The process.
+ * @return {!Worker} The wrapped process, emulating a web worker.
  */
-const forkProcess = function(modulePath, args, options) {
-  return child_process.fork(modulePath, args, options);
+const forkProcess = (modulePath, args, options) => {
+  const child = childProcess.fork(modulePath, args, options);
+
+  //
+  // Electron's contextIsolation limits what can be passed back to the main process, as all return values are proxied
+  // through Electron. Objects will only include their direct keys, not keys inherited by the prototype. This means
+  // classes like the child process will not have keys from their parent, the event emitter. To expose the necessary
+  // functions, we'll provide a wrapper object.
+  //
+  // https://www.electronjs.org/docs/all#contextbridge
+  //
+  return /** @type {!Worker} */ ({
+    addEventListener: (type, callback) => {
+      child.addListener(type, callback);
+    },
+    removeEventListener: (type, callback) => {
+      child.removeListener(type, callback);
+    },
+    postMessage: (msg) => {
+      child.send(msg);
+    }
+  });
 };
 
 /**
  * Get Electron environment options for use in child processes.
  * @return {!Object}
  */
-const getElectronEnvOptions = function() {
-  var options = {
+const getElectronEnvOptions = () => {
+  const options = {
     env: {
       ELECTRON_EXTRA_PATH: process.env.ELECTRON_EXTRA_PATH
     }
@@ -39,7 +58,7 @@ const getElectronEnvOptions = function() {
  * @param {string} base The base path.
  * @return {string} The resolved path.
  */
-const resolveOpenspherePath = function(base) {
+const resolveOpenspherePath = (base) => {
   return path.join(process.env.OPENSPHERE_PATH, base);
 };
 
@@ -48,7 +67,7 @@ const resolveOpenspherePath = function(base) {
  * @param {string} file The file.
  * @param {Function} callback Function to call when the unlink completes.
  */
-const unlinkFile = function(file, callback) {
+const unlinkFile = (file, callback) => {
   fs.unlink(file, callback);
 };
 
@@ -56,11 +75,14 @@ const unlinkFile = function(file, callback) {
 // Expose a minimal interface to the Node environment for use in OpenSphere.
 //
 // For more information, see:
-// https://electronjs.org/docs/tutorial/security#2-disable-nodejs-integration-for-remote-content
 //
-window.ElectronGpkg = {
-  getElectronEnvOptions: getElectronEnvOptions,
-  forkProcess: forkProcess,
-  resolveOpenspherePath: resolveOpenspherePath,
-  unlinkFile: unlinkFile
-};
+// https://www.electronjs.org/docs/all#contextbridge
+// https://www.electronjs.org/docs/tutorial/security#2-do-not-enable-nodejs-integration-for-remote-content
+// https://www.electronjs.org/docs/tutorial/security#3-enable-context-isolation-for-remote-content
+//
+contextBridge.exposeInMainWorld('ElectronGpkg', {
+  getElectronEnvOptions,
+  forkProcess,
+  resolveOpenspherePath,
+  unlinkFile
+});

@@ -14,7 +14,7 @@ var ElectronGpkg = {};
  * @param {string} modulePath The module to run in the child.
  * @param {Array|undefined} args List of string arguments.
  * @param {Object|undefined} options The process options.
- * @return {!Object} The process.
+ * @return {!Worker} The process.
  */
 ElectronGpkg.forkProcess = function(modulePath, args, options) {};
 
